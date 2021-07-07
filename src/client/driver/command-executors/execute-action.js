@@ -11,6 +11,7 @@ import {
 
 import {
     calculateSelectTextArguments,
+    DispatchEvent as DispatchEventAutomation,
     Click as ClickAutomation,
     SelectChildClick as SelectChildClickAutomation,
     RClick as RClickAutomation,
@@ -30,7 +31,11 @@ import {
 import DriverStatus from '../status';
 
 import runWithBarriers from '../utils/run-with-barriers';
-import { ensureElements, createElementDescriptor, createAdditionalElementDescriptor } from '../utils/ensure-elements';
+import {
+    ensureElements,
+    createElementDescriptor,
+    createAdditionalElementDescriptor
+} from '../utils/ensure-elements';
 
 import {
     ActionElementIsInvisibleError,
@@ -44,7 +49,8 @@ import {
 } from '../../../shared/errors';
 
 import COMMAND_TYPE from '../../../test-run/commands/type';
-
+import SetScrollAutomation from '../../automation/playback/set-scroll';
+import ScrollIntoViewAutomation from '../../automation/playback/scroll-into-view';
 
 // Ensure command element properties
 function ensureElementEditable (element) {
@@ -142,6 +148,8 @@ class ActionExecutor {
             elementDescriptors.push(createAdditionalElementDescriptor(this.command.startSelector, 'startSelector'));
             elementDescriptors.push(createAdditionalElementDescriptor(this.command.endSelector || this.command.startSelector, 'endSelector'));
         }
+        else if (this.command.type === COMMAND_TYPE.dispatchEvent && this.command.relatedTarget)
+            elementDescriptors.push(createAdditionalElementDescriptor(this.command.relatedTarget, 'relatedTarget'));
 
         return ensureElements(elementDescriptors, this.globalSelectorTimeout)
             .then(elements => {
@@ -175,6 +183,11 @@ class ActionExecutor {
         let selectArgs = null;
 
         switch (this.command.type) {
+            case COMMAND_TYPE.dispatchEvent:
+                if (this.elements[1])
+                    this.command.options.relatedTarget = this.elements[1];
+
+                return new DispatchEventAutomation(this.elements[0], this.command.eventName, this.command.options);
             case COMMAND_TYPE.click :
                 if (/option|optgroup/.test(domUtils.getTagName(this.elements[0])))
                     return new SelectChildClickAutomation(this.elements[0], this.command.options);
@@ -195,6 +208,22 @@ class ActionExecutor {
 
             case COMMAND_TYPE.dragToElement :
                 return new DragToElementAutomation(this.elements[0], this.elements[1], this.command.options);
+
+            case COMMAND_TYPE.scroll: {
+                const { x, y, position, options } = this.command;
+
+                return new SetScrollAutomation(this.elements[0], { x, y, position }, options);
+            }
+
+            case COMMAND_TYPE.scrollBy: {
+                const { byX, byY, options } = this.command;
+
+                return new SetScrollAutomation(this.elements[0], { byX, byY }, options);
+            }
+
+            case COMMAND_TYPE.scrollIntoView: {
+                return new ScrollIntoViewAutomation(this.elements[0], this.command.options);
+            }
 
             case COMMAND_TYPE.typeText:
                 // eslint-disable-next-line no-restricted-properties

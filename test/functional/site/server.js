@@ -18,7 +18,8 @@ const CONTENT_TYPES = {
     '.html': 'text/html',
     '.png':  'image/png',
     '.zip':  'application/zip',
-    '.pdf':  'application/pdf'
+    '.pdf':  'application/pdf',
+    '.xml':  'application/xml',
 };
 
 const NON_CACHEABLE_PAGES = [
@@ -162,6 +163,15 @@ Server.prototype._setupRoutes = function () {
         setTimeout(function () {
             res.send(delay.toString());
         }, delay);
+    });
+
+    this.app.post('/echo-custom-request-headers-in-response-headers', (req, res) => {
+        Object.keys(req.headers).forEach(headerName => {
+            if (headerName.startsWith('x-header-'))
+                res.setHeader(headerName, req.headers[headerName]);
+        });
+
+        res.end();
     });
 };
 

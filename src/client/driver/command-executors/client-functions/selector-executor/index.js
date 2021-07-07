@@ -1,8 +1,13 @@
 import { Promise, nativeMethods } from '../../../deps/hammerhead';
-import { delay } from '../../../deps/testcafe-core';
+import { delay, domUtils } from '../../../deps/testcafe-core';
 import ClientFunctionExecutor from '../client-function-executor';
 import { exists, visible } from '../../../utils/element-utils';
-import { createReplicator, FunctionTransform, SelectorNodeTransform } from '../replicator';
+import {
+    createReplicator,
+    FunctionTransform,
+    SelectorNodeTransform
+} from '../replicator';
+
 import './filter';
 
 const DateCtor = nativeMethods.date;
@@ -58,7 +63,7 @@ export default class SelectorExecutor extends ClientFunctionExecutor {
                 const isElementVisible   = !this.command.visibilityCheck || visible(el);
                 const isTimeout          = new DateCtor() - startTime >= this.timeout;
 
-                if (isElementExists && isElementVisible)
+                if (isElementExists && (isElementVisible || domUtils.isShadowRoot(el)))
                     return el;
 
                 if (!isTimeout)

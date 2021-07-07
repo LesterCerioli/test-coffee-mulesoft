@@ -1,12 +1,9 @@
 const path               = require('path');
 const fs                 = require('fs');
-const chai               = require('chai');
-const { expect }         = chai;
+const { expect }         = require('chai');
 const config             = require('../../../../config.js');
 const assertionHelper    = require('../../../../assertion-helper.js');
 const { createReporter } = require('../../../../utils/reporter');
-
-chai.use(require('chai-string'));
 
 const SCREENSHOTS_PATH                   = path.resolve(assertionHelper.SCREENSHOTS_PATH);
 const THUMBNAILS_DIR_NAME                = assertionHelper.THUMBNAILS_DIR_NAME;
@@ -265,6 +262,15 @@ describe('[API] t.takeScreenshot()', function () {
                     expect(fs.existsSync(thumbnail2Path)).eql(true);
                 });
         });
+
+        it('Should add default extension if it is not specified', () => {
+            return runTests('./testcafe-fixtures/take-screenshot.js', 'Should add default extension', { only: 'chrome' })
+                .then(() => {
+                    expect(testReport.screenshotPath).endsWith('screenshot-path.png');
+
+                    return assertionHelper.removeScreenshotDir('screenshots');
+                });
+        });
     }
     else if (!config.useLocalBrowsers) {
         it('Should show a warning on an attempt to capture a screenshot for a remote browser', () => {
@@ -323,9 +329,9 @@ describe('[API] t.takeElementScreenshot()', function () {
             })
                 .catch(function (errs) {
                     expect(errs[0]).to.contains(
-                        'Action "selector" argument error:  Selector is expected to be initialized with a ' +
-                        'function, CSS selector string, another Selector, node snapshot or a Promise returned ' +
-                        'by a Selector, but number was passed.'
+                        'Action "selector" argument error:  Cannot initialize a Selector because Selector is number, ' +
+                        'and not one of the following: a CSS selector string, a Selector object, a node snapshot, ' +
+                        'a function, or a Promise returned by a Selector.'
                     );
 
                     expect(errs[0]).to.contains(
@@ -410,7 +416,6 @@ describe('[API] t.takeElementScreenshot()', function () {
                 });
         });
 
-
         it('Should perform bottom-left crop', function () {
             return runTests('./testcafe-fixtures/take-element-screenshot.js', 'Bottom-left',
                 { setScreenshotPath: true })
@@ -421,7 +426,6 @@ describe('[API] t.takeElementScreenshot()', function () {
                     expect(result).eql(true);
                 });
         });
-
 
         it('Should perform bottom-right crop', function () {
             return runTests('./testcafe-fixtures/take-element-screenshot.js', 'Bottom-right',

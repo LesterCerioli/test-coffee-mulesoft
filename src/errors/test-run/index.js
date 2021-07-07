@@ -1,9 +1,6 @@
 import { TEST_RUN_ERRORS } from '../types';
 import * as diff from '../../utils/diff/';
-import {
-    TestRunErrorBase
-} from '../../shared/errors';
-
+import { TestRunErrorBase } from '../../shared/errors';
 export * from '../../shared/errors';
 
 // Base
@@ -99,7 +96,7 @@ export class ExternalAssertionLibraryError extends TestRunErrorBase {
         super(TEST_RUN_ERRORS.externalAssertionLibraryError);
 
         this.errMsg   = String(err);
-        this.diff     = diff.generate(err.actual, err.expected);
+        this.diff     = err?.showDiff && diff.generate(err.actual, err.expected);
         this.callsite = callsite;
     }
 }
@@ -279,22 +276,26 @@ export class SetNativeDialogHandlerCodeWrongTypeError extends TestRunErrorBase {
     }
 }
 
-export class RequestHookUnhandledError extends TestRunErrorBase {
-    constructor (err, hookClassName, methodName) {
-        super(TEST_RUN_ERRORS.requestHookUnhandledError);
+export class RequestHookBaseError extends TestRunErrorBase {
+    constructor (code, hookClassName, methodName) {
+        super(code);
 
-        this.errMsg        = String(err);
         this.hookClassName = hookClassName;
         this.methodName    = methodName;
     }
 }
 
-export class RequestHookNotImplementedMethodError extends TestRunErrorBase {
-    constructor (methodName, hookClassName) {
-        super(TEST_RUN_ERRORS.requestHookNotImplementedError);
+export class RequestHookUnhandledError extends RequestHookBaseError {
+    constructor (err, hookClassName, methodName) {
+        super(TEST_RUN_ERRORS.requestHookUnhandledError, hookClassName, methodName);
 
-        this.methodName    = methodName;
-        this.hookClassName = hookClassName;
+        this.errMsg = String(err);
+    }
+}
+
+export class RequestHookNotImplementedMethodError extends RequestHookBaseError {
+    constructor (methodName, hookClassName) {
+        super(TEST_RUN_ERRORS.requestHookNotImplementedError, hookClassName, methodName);
     }
 }
 

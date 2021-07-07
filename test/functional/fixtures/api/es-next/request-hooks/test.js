@@ -32,6 +32,10 @@ describe('Request Hooks', () => {
         it('Multi-browser', () => {
             return runTests('./testcafe-fixtures/request-logger/multi-browser.js', 'Multi-browser');
         });
+
+        it('Request filter rule predicate', () => {
+            return runTests('./testcafe-fixtures/request-logger/request-filter-rule-predicate.js', null, { only: 'chrome' });
+        });
     });
 
     describe('API', () => {
@@ -61,6 +65,18 @@ describe('Request Hooks', () => {
 
         it("Test's request hooks should not override the fixture's request hooks (GH-4122)", () => {
             return runTests('./testcafe-fixtures/api/i4122.js', null, { only: 'chrome' });
+        });
+
+        it('Async predicate for request filter rules', () => {
+            return runTests('./testcafe-fixtures/api/request-filter-rule-async-predicate.js', null, { only: 'chrome' });
+        });
+
+        it('Change and remove response headers', () => {
+            return runTests('./testcafe-fixtures/api/change-remove-response-headers.js', null, { only: 'chrome' });
+        });
+
+        it('Request hook events should be represented as appropriate classes', () => {
+            return runTests('./testcafe-fixtures/api/request-hook-events.js', null, { only: 'chrome' });
         });
     });
 });

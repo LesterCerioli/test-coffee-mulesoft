@@ -82,12 +82,12 @@ interface RequestData {
     /**
      * Request headers in the property-value form. Logged if the `logRequestHeaders` option is set to `true`.
      */
-    headers: object;
+    headers: Record<string, string>;
     /**
      * The response body. Logged if the `logResponseBody` option is set to `true`.
      * A [Buffer](https://nodejs.org/api/buffer.html) or string depending on the `stringifyResponseBody` option.
      */
-    body: string | any;
+    body: string | Buffer;
     /**
      * The timestamp that specifies when the request was intercepted.
      */
@@ -102,13 +102,13 @@ interface ResponseData {
     /**
      * Response headers in the property-value form. Logged if the `logResponseHeaders` option is set to true.
      */
-    headers: object;
+    headers: Record<string, string>;
     /**
      * The response body.
      * Logged if the `logResponseBody` option is set to true.
-     * A Buffer or string depending on the `stringifyResponseBody` option.
+     * A [Buffer](https://nodejs.org/api/buffer.html) or string depending on the `stringifyResponseBody` option.
      */
-    body: string | any;
+    body: string | Buffer;
     /**
      * The timestamp that specifies when the response was intercepted.
      */
@@ -158,7 +158,7 @@ interface RequestMock {
      * @param statusCode - The response status code.
      * @param headers - Custom headers added to the response in the property-value form.
      */
-    respond(body?: object | string | ((req: RequestOptions, res: ResponseMock) => any), statusCode?: number, headers?: object): RequestMock;
+    respond(body?: object | string | ((req: RequestOptions, res: ResponseMock) => Promise<void>), statusCode?: number, headers?: Record<string, string>): RequestMock;
 }
 
 interface RequestMockFactory {
@@ -170,10 +170,10 @@ interface RequestMockFactory {
  */
 interface RequestOptions {
     /** The request headers in the property-value form. */
-    headers: Object;
+    headers: Record<string, string>;
     /** The request body. */
     body: Buffer;
-    /** The URL to which the request is sent. */
+    /** The URL of the resource. */
     url: string;
     /** The protocol to use. Default: http:. */
     protocol: string;
@@ -189,7 +189,7 @@ interface RequestOptions {
      * rejected but that may change in the future. Default: '/'.
      */
     path: string;
-    /** The string specifying the HTTP request method. Default: 'GET'. */
+    /** The HTTP request method. Default: 'GET'. */
     method: string;
     /**
      * Credentials that were used for authentication in the current session using NTLM or Basic
@@ -197,16 +197,20 @@ interface RequestOptions {
      * authentication additionally specifies `workstation` and `domain`.
      * See {@link https://devexpress.github.io/testcafe/documentation/guides/advanced-guides/authentication.html#http-authentication HTTP Authentication}.
      */
-    credentials: object;
+    credentials: Record<string, string>;
     /**
      * If a proxy is used, the property contains information about its `host`, `hostname`, `port`,
      * `proxyAuth`, `authHeader` and `bypassRules`.
      */
-    proxy: object;
+    proxy: Record<string, unknown>;
+    /**
+     * Specifies whether the request is an AJAX request (xhr or fetch).
+     */
+    isAjax: Boolean;
 }
 
 interface ResponseMock {
-    headers: object;
+    headers: Record<string, string>;
     statusCode: number;
     setBody(value: string): void;
 }

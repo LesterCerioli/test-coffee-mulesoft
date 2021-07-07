@@ -25,6 +25,10 @@ export class GeneralError extends Error {
         Object.assign(this, { code, data: args });
         Error.captureStackTrace(this, GeneralError);
     }
+
+    static isGeneralError (arg) {
+        return arg instanceof GeneralError;
+    }
 }
 
 export class TestCompilationError extends Error {
@@ -120,6 +124,18 @@ export class ReporterPluginError extends GeneralError {
     constructor ({ name, method, originalError }) {
         const code = RUNTIME_ERRORS.uncaughtErrorInReporter;
 
-        super(code, name, method, originalError.stack);
+        super(code, method, name, originalError.stack);
+    }
+}
+
+export class TimeoutError extends GeneralError {
+    constructor () {
+        super(RUNTIME_ERRORS.timeLimitedPromiseTimeoutExpired);
+    }
+}
+
+export class BrowserConnectionError extends GeneralError {
+    constructor (...args) {
+        super(RUNTIME_ERRORS.browserConnectionError, ...args);
     }
 }

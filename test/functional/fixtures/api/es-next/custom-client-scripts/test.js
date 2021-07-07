@@ -39,8 +39,8 @@ describe('Custom client scripts', () => {
                 expect(testReport.warnings).eql([
                     'The client script you tried to inject is empty.',
                     'You injected the following client scripts several times:\n' +
-                    ' "{ content: \'1\' }",\n' +
-                    ` "{ path: '${path.resolve('test/functional/fixtures/api/es-next/custom-client-scripts/data/set-flag1.js')}' }"`
+                    '"{ content: \'1\' }"\n' +
+                    `"{ path: '${path.resolve('test/functional/fixtures/api/es-next/custom-client-scripts/data/set-flag1.js')}' }"`
                 ]);
             });
     });
@@ -75,7 +75,7 @@ describe('Custom client scripts', () => {
         it('Wrong module name', () => {
             return runTests('./testcafe-fixtures/wrong-module-name.js', null, { shouldFail: true })
                 .catch(err => {
-                    expect(err.message).eql("An error occurred when trying to locate the injected client script module:\n\nCannot find module 'wrong-module-name'.");
+                    expect(err.message).contains("A client script tried to load a JavaScript module that TestCafe cannot locate:\n\nCannot find module 'wrong-module-name'");
                 });
         });
     });

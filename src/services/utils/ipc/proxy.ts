@@ -1,5 +1,6 @@
 import TestCafeErrorList from '../../../errors/error-list';
 import EventEmitter from '../../../utils/async-event-emitter';
+import { castArray } from 'lodash';
 
 import {
     ExternalError,
@@ -48,20 +49,9 @@ export class IPCProxy extends EventEmitter {
                 if (item.callsite)
                     item.callsite = prerenderCallsite(item.callsite);
             }
-
-            return error;
         }
 
-        // NOTE: The properties of the 'Error' class lost during serialization using the 'JSON.stringify' way
-        // because they are not enumerable.
-        // We clone the object and copy these properties explicitly to mark these properties as enumerable.
-        const errorData = Object.assign({}, error);
-
-        errorData.name    = errorData.name || error.name;
-        errorData.message = errorData.message || error.message;
-        errorData.stack   = errorData.stack || error.stack;
-
-        return errorData;
+        return error;
     }
 
     private async _onRead (packet: IPCPacket): Promise<void> {
@@ -122,11 +112,15 @@ export class IPCProxy extends EventEmitter {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    public register (func: Function, context: any = null): void {
-        if (this._handlers[func.name])
-            return;
+    public register (func: Function | Function[], context: any = null): void {
+        func = castArray(func);
 
-        this._handlers[func.name] = func.bind(context);
+        func.forEach(fn => {
+            if (this._handlers[fn.name])
+                return;
+
+            this._handlers[fn.name] = fn.bind(context);
+        });
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

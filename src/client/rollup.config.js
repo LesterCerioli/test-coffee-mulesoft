@@ -9,10 +9,16 @@ import inject from '@rollup/plugin-inject';
 import alias from '@rollup/plugin-alias';
 
 
-const IDLE_PAGE_CHUNK = 'browser/idle-page/index.js';
+const NO_HAMMERHEAD_CHUNKS = [
+    'browser/idle-page/index.js',
+    'browser/service-worker.js',
+
+    // TODO: should not inject pinkie
+    'proxyless/index.ts'
+];
 
 const CHUNK_NAMES = [
-    IDLE_PAGE_CHUNK,
+    ...NO_HAMMERHEAD_CHUNKS,
     'core/index.js',
     'driver/index.js',
     'ui/index.js',
@@ -33,14 +39,17 @@ const EXTENDED_GLOBALS = {
     'pinkie': 'window[\'%hammerhead%\'].Promise'
 };
 
-const GLOBALS = chunk => chunk === IDLE_PAGE_CHUNK ? COMMON_GLOBALS : EXTENDED_GLOBALS;
+const GLOBALS = chunk => NO_HAMMERHEAD_CHUNKS.includes(chunk) ? COMMON_GLOBALS : EXTENDED_GLOBALS;
 
 const CONFIG = CHUNK_NAMES.map(chunk => ({
     input:    chunk,
     external: Object.keys(GLOBALS(chunk)),
 
+    //NOTE: need to keep this to prevent rollup from generating warnings about replacing `this` in TypeScript polyfills
+    context: '(void 0)',
+
     output: {
-        file:    path.join(TARGET_DIR, chunk),
+        file:    path.join(TARGET_DIR, chunk.replace(/\.ts$/, '.js')),
         format:  'iife',
         globals: GLOBALS(chunk),
         // NOTE: 'use strict' in our scripts can break user code
@@ -49,7 +58,6 @@ const CONFIG = CHUNK_NAMES.map(chunk => ({
     },
 
     plugins: [
-        inject({ Promise: 'pinkie' }),
         resolve(),
         alias({
             entries: [{
@@ -58,7 +66,10 @@ const CONFIG = CHUNK_NAMES.map(chunk => ({
             }]
         }),
         commonjs(),
-        typescript({ include: ['*.+(j|t)s', '**/*.+(j|t)s', '../**/*.+(j|t)s'] })
+        typescript({ include: ['*.+(j|t)s', '**/*.+(j|t)s', '../**/*.+(j|t)s'] }),
+
+        //NOTE: Need to keep this after the typescript plugin to allow using both async/await and TypeScript
+        inject({ Promise: 'pinkie' }),
     ]
 }));
 

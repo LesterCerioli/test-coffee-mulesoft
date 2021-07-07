@@ -96,6 +96,8 @@ interface WindowFilterData {
     url: URL;
 }
 
+type ScrollPosition = 'top' | 'right' | 'bottom' | 'left' | 'topRight' | 'topLeft' | 'bottomRight' | 'bottomLeft' | 'center';
+
 interface TestController {
     /**
      * Dictionary that is shared between test hook functions and test code.
@@ -109,6 +111,15 @@ interface TestController {
      * Returns an object that contains browser information.
      */
     readonly browser: Browser;
+    /**
+     * Dispatches an event over a specified webpage element.
+     *
+     * @param selector - Identifies the EventTarget element.
+     * @param eventName - The name of the event to be dispatched on the DOM element..
+     * @param options - The options which will be passed to EventConstructor.
+     */
+    dispatchEvent(selector: string | Selector | NodeSnapshot | SelectorPromise | ((...args: any[]) => Node | Node[] | NodeList | HTMLCollection),
+                  eventName: string, options?: object): TestControllerPromise;
     /**
      * Clicks a webpage element.
      *
@@ -141,6 +152,68 @@ interface TestController {
      */
     hover(selector: string | Selector | NodeSnapshot | SelectorPromise | ((...args: any[]) => Node | Node[] | NodeList | HTMLCollection),
           options?: MouseActionOptions): TestControllerPromise;
+     /**
+     * Scrolls the document element to the { scrollLeft, scrollTop } position.
+     *
+     * @param scrollLeft - The position along the horizontal axis of the document.
+     * @param scrollTop - The position along the vertical axis of the document.
+     */
+    scroll(posX: number, posY: number): TestControllerPromise;
+
+    /**
+     * Scrolls the document element to the predefined position.
+     *
+     * @param position - The position to scroll the document to. Valid values are topLeft, top, topRight, left, center, right, bottomLeft, bottom, bottomRight
+     */
+    scroll(position: ScrollPosition): TestControllerPromise;
+
+    /**
+     * Scrolls the specified element to the { scrollLeft, scrollTop } position.
+     *
+     * @param selector - Identifies the webpage element being hovered over.
+     * @param scrollLeft - The position along the horizontal axis of the document.
+     * @param scrollTop - The position along the vertical axis of the document.
+     * @param options - A set of options that provide additional parameters for the action.
+     */
+    scroll(selector: string | Selector | NodeSnapshot | SelectorPromise | ((...args: any[]) => Node | Node[] | NodeList | HTMLCollection),
+         scrollLeft: number, scrollTop: number, options?: OffsetOptions): TestControllerPromise;
+
+    /**
+     * Scrolls the specified element to the predefined position.
+     *
+     * @param selector - Identifies the webpage element being hovered over.
+     * @param position - The position to scroll the document to. Valid values are topLeft, top, topRight, left, center, right, bottomLeft, bottom, bottomRight
+     * @param options - A set of options that provide additional parameters for the action.
+     */
+    scroll(selector: string | Selector | NodeSnapshot | SelectorPromise | ((...args: any[]) => Node | Node[] | NodeList | HTMLCollection),
+         position: ScrollPosition, options?: OffsetOptions): TestControllerPromise;
+
+    /**
+     * Scrolls the document element by the given offset.
+     *
+     * @param scrollLeft - The horizontal pixel value that you want to scroll by.
+     * @param scrollTop - The vertical pixel value that you want to scroll by.
+     */
+    scrollBy(x: number, y: number): TestControllerPromise;
+
+    /**
+     * Scrolls the specified element by the given offset.
+     * @param selector - Identifies the webpage element being hovered over.
+     * @param scrollLeft - The horizontal pixel value that you want to scroll by.
+     * @param scrollTop - The vertical pixel value that you want to scroll by.
+     * @param options - A set of options that provide additional parameters for the action.
+     */
+    scrollBy(selector: string | Selector | NodeSnapshot | SelectorPromise | ((...args: any[]) => Node | Node[] | NodeList | HTMLCollection),
+         x: number, y: number, options?: OffsetOptions): TestControllerPromise;
+
+    /**
+     * Scrolls the specified element into view.
+     * @param selector - Identifies the webpage element being hovered over.
+     * @param options - A set of options that provide additional parameters for the action.
+     */
+    scrollIntoView(selector: string | Selector | NodeSnapshot | SelectorPromise | ((...args: any[]) => Node | Node[] | NodeList | HTMLCollection),
+         options?: OffsetOptions): TestControllerPromise;
+
     /**
      * Drags an element by an offset.
      *
@@ -217,7 +290,7 @@ interface TestController {
      * @param keys - The sequence of keys and key combinations to be pressed.
      * @param options - A set of options that provide additional parameters for the action.
      */
-    pressKey(keys: string, options?: ActionOptions): TestControllerPromise;
+    pressKey(keys: string, options?: PressActionOptions): TestControllerPromise;
     /**
      * Pauses a test for a specified period of time.
      *
@@ -414,8 +487,9 @@ interface TestController {
     removeRequestHooks(...hooks: object[]): TestControllerPromise;
 }
 
-interface TestControllerPromise extends TestController, Promise<any> {
+interface TestControllerPromise<T=any> extends TestController, Promise<T> {
 }
 
-interface WindowDescriptorPromise extends TestController, Promise<WindowDescriptor> {
+interface WindowDescriptorPromise extends TestControllerPromise<WindowDescriptor> {
 }
+

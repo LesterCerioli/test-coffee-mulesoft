@@ -4,12 +4,16 @@
 // -------------------------------------------------------------
 
 export default {
+    dispatchEvent:              'dispatch-event',
     click:                      'click',
     rightClick:                 'right-click',
     doubleClick:                'double-click',
     drag:                       'drag',
     dragToElement:              'drag-to-element',
     hover:                      'hover',
+    scroll:                     'scroll',
+    scrollBy:                   'scroll-by',
+    scrollIntoView:             'scroll-into-view',
     typeText:                   'type-text',
     selectText:                 'select-text',
     selectTextAreaContent:      'select-text-area-content',
@@ -44,9 +48,11 @@ export default {
     setNativeDialogHandler:     'set-native-dialog-handler',
     getNativeDialogHistory:     'get-native-dialog-history',
     getBrowserConsoleMessages:  'get-browser-console-messages',
+    getActiveElement:           'get-active-element',
     setTestSpeed:               'set-test-speed',
     setPageLoadTimeout:         'set-page-load-timeout',
     debug:                      'debug',
+    disableDebug:               'disable-debug',
     assertion:                  'assertion',
     useRole:                    'useRole',
     testDone:                   'test-done',

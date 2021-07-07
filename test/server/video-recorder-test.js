@@ -125,6 +125,7 @@ function createTestRunMock (warningLog) {
 
     return {
         testRun,
+        test:  { skip: false },
         index: 0
     };
 }
@@ -165,7 +166,7 @@ describe('Video Recorder', () => {
 
         videoRecorder._addProblematicPlaceholdersWarning(['${TEST_INDEX}', '${FIXTURE}']);
         expect(warningLog.messages).eql([
-            'The "${TEST_INDEX}", "${FIXTURE}" path pattern placeholders cannot be applied to the recorded video.' +
+            'The "${TEST_INDEX}" and "${FIXTURE}" path pattern placeholders cannot be applied to the recorded video.' +
             '\n\n' +
             'The placeholders were replaced with an empty string.'
         ]);
@@ -201,9 +202,7 @@ describe('Video Recorder', () => {
         return browserJobMock.emit('start')
             .then(() => browserJobMock.emit('test-run-create', testRunMock))
             .then(() => browserJobMock.emit('test-run-before-done', testRunMock))
-            .then(() => {
-                return testRunMock.testRun.executeCommand({ type: COMMAND_TYPE.resizeWindow });
-            })
+            .then(() => testRunMock.testRun.executeCommand({ type: COMMAND_TYPE.resizeWindow }))
             .then(() => {
                 expect(videoRecorder.log.includes('The browser window was resized during the "Test" test while TestCafe recorded a video. TestCafe cannot adjust the video resolution during recording. As a result, the video content may appear broken. Do not resize the browser window when TestCafe records a video.')).to.be.true;
             });

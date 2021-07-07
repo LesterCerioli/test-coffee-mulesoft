@@ -1,4 +1,5 @@
 import hammerhead from './deps/hammerhead';
+import DispatchEventAutomation from './playback/dispatch-event';
 import ScrollAutomation from './playback/scroll';
 import ClickAutomation from './playback/click';
 import SelectChildClickAutomation from './playback/click/select-child';
@@ -20,6 +21,7 @@ import {
 import AutomationSettings from './settings';
 import { getOffsetOptions } from './utils/offsets';
 import { getNextFocusableElement } from './playback/press/utils';
+import SHORTCUT_TYPE from './playback/press/shortcut-type';
 import { getSelectionCoordinatesByPosition } from './playback/select/utils';
 import { fromPoint as getElementFromPoint } from './get-element';
 import calculateSelectTextArguments from './playback/select/calculate-select-text-arguments';
@@ -29,6 +31,7 @@ import cursor from './cursor';
 
 const exports = {};
 
+exports.DispatchEvent         = DispatchEventAutomation;
 exports.Scroll                = ScrollAutomation;
 exports.Click                 = ClickAutomation;
 exports.SelectChildClick      = SelectChildClickAutomation;
@@ -52,6 +55,7 @@ exports.getOffsetOptions             = getOffsetOptions;
 exports.calculateSelectTextArguments = calculateSelectTextArguments;
 exports.cursor                       = cursor;
 exports.getNextFocusableElement      = getNextFocusableElement;
+exports.SHORTCUT_TYPE                = SHORTCUT_TYPE;
 
 exports.getSelectionCoordinatesByPosition = getSelectionCoordinatesByPosition;
 

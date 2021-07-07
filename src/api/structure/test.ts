@@ -13,12 +13,15 @@ import Fixture from './fixture';
 import RequestHook from '../request-hooks/hook';
 import ClientScriptInit from '../../custom-client-scripts/client-script-init';
 import { SPECIAL_BLANK_PAGE } from 'testcafe-hammerhead';
+import { TestTimeouts } from './interfaces';
+import TestTimeout from './test-timeout';
 
 export default class Test extends TestingUnit {
     public fixture: Fixture;
     public fn: Function | null;
     public beforeFn: Function | null;
     public afterFn: Function | null;
+    public timeouts: TestTimeouts | null;
 
     public constructor (testFile: TestFile) {
         // NOTE: 'fixture' directive can be missing
@@ -27,10 +30,11 @@ export default class Test extends TestingUnit {
 
         super(testFile, UnitType.test, pageUrl);
 
-        this.fixture       = fixture;
-        this.fn            = null;
-        this.beforeFn      = null;
-        this.afterFn       = null;
+        this.fixture  = fixture;
+        this.fn       = null;
+        this.beforeFn = null;
+        this.afterFn  = null;
+        this.timeouts = null;
 
         if (this.fixture) {
             this.requestHooks  = this.fixture.requestHooks.slice();
@@ -55,7 +59,7 @@ export default class Test extends TestingUnit {
     }
 
     private _before$ (fn: Function): Function {
-        assertType(is.function, 'before', 'test.before hook', fn);
+        assertType(is.function, 'before', 'The test.before hook', fn);
 
         this.beforeFn = wrapTestFunction(fn);
 
@@ -63,7 +67,7 @@ export default class Test extends TestingUnit {
     }
 
     private _after$ (fn: Function): Function {
-        assertType(is.function, 'after', 'test.after hook', fn);
+        assertType(is.function, 'after', 'The test.after hook', fn);
 
         this.afterFn = wrapTestFunction(fn);
 
@@ -94,6 +98,20 @@ export default class Test extends TestingUnit {
 
         this.clientScripts                    = union(this.clientScripts, scripts);
         this.apiMethodWasCalled.clientScripts = true;
+
+        return this.apiOrigin;
+    }
+
+    private _timeouts$ (timeouts: TestTimeouts): Function {
+        assertType(is.testTimeouts, 'timeouts', 'test.timeouts', timeouts);
+
+        Object.keys(TestTimeout)
+            .filter(timeout => timeout in timeouts)
+            .forEach(timeout => {
+                assertType(is.nonNegativeNumber, 'timeouts', `test.timeouts.${timeout}`, timeouts[timeout as keyof TestTimeouts]);
+            });
+
+        this.timeouts = timeouts;
 
         return this.apiOrigin;
     }

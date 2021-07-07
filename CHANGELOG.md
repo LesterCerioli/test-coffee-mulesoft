@@ -1,5 +1,541 @@
 # Changelog
 
+## v1.15.0 (2021-06-28)
+
+### Enhancements
+
+#### Dispatch DOM events ([#6103](https://github.com/DevExpress/testcafe/pull/6103))
+
+```plaintext
+t.dispatchEvent(target, eventName[, options])
+```
+
+The [`t.dispatchEvent`](https://testcafe.io/documentation/402712/reference/test-api/testcontroller/dispatchevent) method lets you interact with the page in ways that TestCafe does not support out of the box. To implement an unsupported user action, break it down into discrete DOM events, and use the `t.dispatchEvent` method to fire them.
+
+>Internet Explorer does [not](https://developer.mozilla.org/en-US/docs/Web/API/Event/Event) support event constructors. As such, TestCafe cannot dispatch DOM events in this browser.
+
+The following example fires a `touchstart` action on an element with the 'button' id:
+
+```js
+await t.dispatchEvent('#button', 'touchstart',  { eventConstructor: 'TouchEvent' });
+```
+
+Read the [Custom Actions Guide](https://testcafe.io/documentation/402843/guides/advanced-guides/custom-actions) for more information on DOM events and event constructors.
+
+#### Modify request hook headers ([#6140](https://github.com/DevExpress/testcafe/pull/6140))
+
+You can now modify the headers of custom request hooks. Call the `event.setHeader` and `event.removeHeader` methods. See the [Request Hook article](https://testcafe.io/documentation/402669/reference/test-api/requesthook#change-or-delete-response-headers) for more information.
+
+#### Quarantine mode customization ([#6073](https://github.com/DevExpress/testcafe/pull/6073))
+
+New settings are available in [quarantine mode](https://testcafe.io/documentation/402830/guides/basic-guides/run-tests#quarantine-mode). Quarantine mode repeats failing tests to help users get conclusive test results in sub-optimal conditions. TestCafe v1.15 adds two variables - `successThreshold` and `attemptLimit` - that allow you specify when TestCafe must stop.
+
+The `attemptLimit` variable determines the maximum possible number of test attempts.
+The `successThreshold` variable determines the number of successful attempts necessary for the test to pass.
+
+```js
+testcafe chrome ./tests/ -q attemptLimit=5, successThreshold=2
+```
+
+#### Password obfuscation ([#6014](https://github.com/DevExpress/testcafe/issues/6014))
+
+TestCafe reporters no longer receive the contents of `password` input fields, unless you explicitly specify otherwise. This improves security for users that store their test results online.
+
+#### Support for non-HTML documents ([#1471](https://github.com/DevExpress/testcafe/issues/1471))
+
+TestCafe now has the capability to proxy non-HTML documents such as XML and text files. Tests no longer hang upon redirection to a non-HTML address.
+
+### Bug Fixes
+
+* TestCafe incorrectly processes elements with negative tabIndex values ([#4848](https://github.com/DevExpress/testcafe/issues/4848)).
+* TestCafe incorrectly processes some eventListeners in multi-window mode ([#5621](https://github.com/DevExpress/testcafe/issues/5621)).
+* TestCafe incorrectly processes the \<base\> HTML tag ([testcafe-hammerhead/#1965](https://github.com/DevExpress/testcafe-hammerhead/issues/1965)).
+* TestCafe doesn't intercept `Navigator.prototype` requests ([PR testcafe-hammerhead/#2643](https://github.com/DevExpress/testcafe-hammerhead/pull/2643) by [@michaelficarra](https://github.com/michaelficarra)).
+* TestCafe doesn't intercept `WorkerGlobalScope.importScripts()` arguments ([testcafe-hammerhead/#2521](https://github.com/DevExpress/testcafe-hammerhead/issues/2521)).
+* A website parsing error causes test failure ([testcafe-hammerhead/#2650](https://github.com/DevExpress/testcafe-hammerhead/issues/2650)).
+* TestCafe stops recording test videos after you skip a fixture ([#6163](https://github.com/DevExpress/testcafe/issues/6163)).
+* Links with empty `download` attributes cause TestCafe to hang ([#6132](https://github.com/DevExpress/testcafe/issues/6132)).
+* TestCafe reports incorrect line numbers ([#5642](https://github.com/DevExpress/testcafe/issues/5642)).
+* TestCafe incorrectly processes some for-of statements ([PR testcafe-hammerhead/#2632](https://github.com/DevExpress/testcafe-hammerhead/pull/2632)).
+* TestCafe sometimes directs window location queries to non-window objects ([testcafe-hammerhead/#2611](https://github.com/DevExpress/testcafe-hammerhead/issues/2611)).
+* Performance enhancement: obtaining element attributes ([#6117](https://github.com/DevExpress/testcafe/issues/6117))
+
+## v1.14.2 (2021-05-13)
+
+## Bug Fixes
+
+* Fixed a bug that caused the `The "--quarantine-mode" option value is not a valid key-value pair` error
+
+## v1.14.1 (2021-05-12)
+
+## Bug Fixes
+
+* Fixed a bug that caused TestCafe to hang during the execution of TestCafe Studio tests ([#5207](https://github.com/DevExpress/testcafe/issues/5207))
+* Added a type definition for the `disableScreenshots` Runner option ([#5735](https://github.com/DevExpress/testcafe/issues/5735))
+* Fixed a multi-window mode bug that caused TestCafe to launch an empty browser window and then hang ([#6132](https://github.com/DevExpress/testcafe/issues/6132))
+* Fixed a bug that denied users access to iframes with `srcdoc` attributes ([#6033](https://github.com/DevExpress/testcafe/issues/6033))
+* Fixed a bug that interfered with the loading of Word Online documents in Firefox ([testcafe-hammerhead#2287](https://github.com/DevExpress/testcafe-hammerhead/issues/2287))
+
+## v1.14.0 (2021-4-7)
+
+## Enhancements
+
+### ⚙ Scroll Actions ([PR #6066](https://github.com/DevExpress/testcafe/pull/6066))
+
+When TestCafe interacts with elements on the page, it scrolls the page automatically to reach those elements.
+
+This release introduces actions that allow you to scroll webpage elements manually.
+
+* [t.scroll](https://devexpress.github.io/testcafe/documentation/reference/test-api/testcontroller/scroll.html) - scrolls the element to a specified position
+* [t.scrollBy](https://devexpress.github.io/testcafe/documentation/reference/test-api/testcontroller/scrollby.html) - scrolls the element by the specified number of pixels
+* [t.scrollIntoView](https://devexpress.github.io/testcafe/documentation/reference/test-api/testcontroller/scrollintoview.html) - scrolls the element into view
+
+You can use the `t.scroll` action to scroll an element to a position:
+
+```js
+ import { Selector } from 'testcafe';
+
+ fixture`Scroll Action`
+     .page('http://example.com');
+
+ test('Scroll the container', async t => {
+     const container = Selector('#container');
+
+     await t
+         .scroll(container, 'bottomRight')
+ });
+ ```
+
+ `t.scrollBy` allows you to scroll an element (or the webpage) by a set amount of pixels. The example below scrolls the webpage 200px up and 500px to the right:
+
+ ```js
+ fixture`Scroll Action`
+     .page('http://example.com');
+
+ test('Scroll the webpage', async t => {
+     await t
+         .scrollBy(500, -200)
+ });
+ ```
+
+Use `t.scrollIntoView` to scroll an element into view:
+
+```js
+ import { Selector } from 'testcafe';
+
+ fixture `Scroll Actions`
+     .page `http://www.example.com/`;
+
+ test('Scroll element into view', async t => {
+     const target = Selector('#target')
+
+     await t
+         .scrollIntoView(target)
+ });
+ ```
+
+## Bug Fixes
+
+* Fixed an error that caused [expect.contains](https://devexpress.github.io/testcafe/documentation/reference/test-api/testcontroller/expect/contains.html) assertions to display `undefined` instead of a string value in diffs ([#5473](https://github.com/DevExpress/testcafe/issues/5473))
+
+## v1.13.0 (2021-03-22)
+
+This release adds support for custom paths to the configuration file, support for Microsoft Edge on Linux systems, and multiple bugfixes.
+
+### Enhancements
+
+#### :gear: Specify Custom Path to the TestCafe Configuration File ([PR #6035](https://github.com/DevExpress/testcafe/pull/6035) by [@Chris-Greaves](https://github.com/Chris-Greaves))
+
+TestCafe now allows you to specify a custom [configuration file](https://devexpress.github.io/testcafe/documentation/reference/configuration-file.html) path.
+
+To set this path, use one of the following options:
+
+* the [--config-file CLI flag](https://devexpress.github.io/testcafe/documentation/reference/command-line-interface.html#--config-file-path)
+* the [configFile parameter of the createTestCafe function](https://devexpress.github.io/testcafe/documentation/reference/testcafe-api/global/createtestcafe.html#options)
+
+#### Add Support for Microsoft Edge on Linux ([PR testcafe-browser-tools/#210](https://github.com/DevExpress/testcafe-browser-tools/pull/210) by [@dcsaszar](https://github.com/dcsaszar))
+
+If you follow the [Microsoft Edge Insider Channels for Linux](https://www.microsoftedgeinsider.com/en-us/download?platform=linux-deb) and have Microsoft Edge installed on your Linux machine, you can now launch TestCafe tests in this browser.
+
+```sh
+testcafe edge tests/test.js
+```
+
+#### :gear: Deprecated the `t.setPageLoadTimeout` method ([PR #5979](https://github.com/DevExpress/testcafe/pull/5979))
+
+Starting with v1.13.0, the [t.setPageLoadTimeout](https://devexpress.github.io/testcafe/documentation/reference/test-api/testcontroller/setpageloadtimeout.html) method is deprecated. To set the page load timeout, use the new [test.timeouts](https://devexpress.github.io/testcafe/documentation/reference/test-api/test/timeouts.html) method.
+
+```js
+fixture`Setting Timeouts`
+    .page`http://devexpress.github.io/testcafe/example`;
+
+test
+    .timeouts({
+        pageLoadTimeout: 2000
+    })
+    ('My test', async t => {
+        //test actions
+    })
+```
+
+You can also use `test.timeouts` to set the [pageRequestTimeout](https://devexpress.github.io/testcafe/documentation/reference/configuration-file.html#pagerequesttimeout) and [ajaxRequestTimeout](https://devexpress.github.io/testcafe/documentation/reference/configuration-file.html#ajaxrequesttimeout).
+
+```js
+fixture`Setting Timeouts`
+    .page`http://devexpress.github.io/testcafe/example`;
+
+test
+    .timeouts({
+        pageLoadTimeout:    2000,
+        pageRequestTimeout: 60000,
+        ajaxRequestTimeout: 60000
+    })
+    ('My test', async t => {
+        //test actions
+    })
+```
+
+### Bug Fixes
+
+* Fixed a bug where TestCafe would sometimes be unable to trigger a `hover` event on a `radio` element ([#5916](https://github.com/DevExpress/testcafe/issues/5916))
+* Fixed a bug where TestCafe was unable to register a Service Worker due to the wrong `currentScope` calculation inside a `Window.postMessage` call ([testcafe-hammerhead/#2524](https://github.com/DevExpress/testcafe-hammerhead/issues/2524))
+* `RequestLogger` now shows a correct protocol for WebSocket requests ([testcafe-hammerhead/#2591](https://github.com/DevExpress/testcafe-hammerhead/issues/2591))
+* Test execution now pauses when the browser window is in the background ([testcafe-browser-tools/#158](https://github.com/DevExpress/testcafe-browser-tools/issues/158))
+* TestCafe now appends an extension to screenshot filenames ([#5103](https://github.com/DevExpress/testcafe/issues/5103))
+* Fixed a bug where TestCafe would emit test action events after the end of a test run ([#5650](https://github.com/DevExpress/testcafe/issues/5650))
+* TestCafe now closes if the `No tests to run` error occurs in Live mode ([#4257](https://github.com/DevExpress/testcafe/issues/4257))
+* Fixed a freeze that happened when you run a test suite with skipped tests ([#4967](https://github.com/DevExpress/testcafe/issues/4967))
+* Fixed an error where a `documentElement.transform.translate` call moved the TestCafe UI in the browser window ([#5606](https://github.com/DevExpress/testcafe/issues/5606))
+* TestCafe now emits a warning if you pass an unawaited selector to an assertion ([#5554](https://github.com/DevExpress/testcafe/issues/5554))
+* Fixed a crash that sometimes occurred in Chrome v85 and earlier on pages with scripts ([PR testcafe-hammerhead/#2590](https://github.com/DevExpress/testcafe-hammerhead/pull/2590))
+
+## v1.12.0 (2021-03-03)
+
+### Enhancements
+
+#### :gear: Server-Side Web Assets Caching ([testcafe-hammerhead/#863](https://github.com/DevExpress/testcafe-hammerhead/issues/863))
+
+TestCafe's proxy server can now cache web assets (like images, scripts and videos). When TestCafe revisits a website, it loads assets from this cache to save time on repetetive network requests.
+
+To enable server-side caching, use any of the following:
+
+* [the `--cache` CLI flag](https://devexpress.github.io/testcafe/documentation/reference/command-line-interface.html#--cache)
+* [the `cache` configuration file property](https://devexpress.github.io/testcafe/documentation/reference/configuration-file.html#cache)
+* [the `createTestCafe` function parameter](https://devexpress.github.io/testcafe/documentation/reference/testcafe-api/global/createtestcafe.html)
+
+#### Initialize Request Hooks with Async Predicates
+
+The following request hooks now support **asynchronous** predicate functions:
+
+* [RequestHook](https://devexpress.github.io/testcafe/documentation/reference/test-api/requesthook/constructor.html#filter-with-a-predicate)
+* [RequestMock.onRequestTo](https://devexpress.github.io/testcafe/documentation/reference/test-api/requestmock/onrequestto.html#filter-with-a-predicate)
+* [RequestLogger](https://devexpress.github.io/testcafe/documentation/reference/test-api/requestlogger/constructor.html#filter-with-a-predicate)
+
+**Example**
+
+```js
+const logger = RequestLogger(async request => {
+    return await myAsyncFunction();
+});
+```
+
+### Bug Fixes
+
+* Fixed a bug in Multiple Windows mode where TestCafe was sometime unable to switch to the main browser window ([#5930](https://github.com/DevExpress/testcafe/issues/5930))
+* Fixed the `Illegal invocation` error thrown by TestCafe when calling `Storage.prototype` methods on a `StorageWrapper` object ([#2526](https://github.com/DevExpress/testcafe-hammerhead/issues/2526))
+
+## v1.11.0 (2021-03-02)
+
+### Enhancements
+
+#### :gear: Set Request Timeouts ([PR #5692](https://github.com/DevExpress/testcafe/pull/5692))
+
+TestCafe now enables you to set request timeouts. If TestCafe receives no response within the specified period, it throws an error.
+
+*CLI*
+
+* [--ajax-request-timeout](https://devexpress.github.io/testcafe/documentation/reference/command-line-interface.html#--ajax-request-timeout-ms) controls the timeout for fetch/XHR requests
+* [--page-request-timeout](https://devexpress.github.io/testcafe/documentation/reference/command-line-interface.html#--page-request-timeout-ms) sets the timeout for webpage requests
+
+```sh
+testcafe chrome my-tests --ajax-request-timeout 40000 --page-request-timeout 8000
+```
+
+*Configuration file*
+
+* [ajaxRequestTimeout](https://devexpress.github.io/testcafe/documentation/reference/configuration-file.html#ajaxrequesttimeout)
+* [pageRequestTimeout](https://devexpress.github.io/testcafe/documentation/reference/configuration-file.html#pagerequesttimeout)
+
+```json
+{
+    "pageRequestTimeout": 8000,
+    "ajaxRequestTimeout": 40000
+}
+```
+
+*JavaScript API*
+
+These options are available in the [runner.run Method](https://devexpress.github.io/testcafe/documentation/reference/testcafe-api/runner/run.html).
+
+```js
+const createTestCafe = require('testcafe');
+
+const testcafe = await createTestCafe('localhost', 1337, 1338);
+
+try {
+    const runner = testcafe.createRunner();
+
+    const failed = await runner.run({
+        pageRequestTimeout: 8000,
+        ajaxRequestTimeout: 40000
+    });
+
+    console.log('Tests failed: ' + failed);
+}
+finally {
+    await testcafe.close();
+}
+```
+
+#### :gear: Set Browser Initialization Timeout ([PR #5720](https://github.com/DevExpress/testcafe/pull/5720))
+
+This release introduces an option to control browser initialization timeout. This timeout controls the time browsers have to connect to TestCafe before an error is thrown. You can control this timeout in one of the following ways:
+
+* [--browser-init-timeout](https://devexpress.github.io/testcafe/documentation/reference/command-line-interface.html#--browser-init-timeout-ms) CLI option
+
+```sh
+testcafe chrome my-tests --browser-init-timeout 180000
+```
+
+* [browserInitTimeout](https://devexpress.github.io/testcafe/documentation/reference/configuration-file.html#browserinittimeout) configuration option
+
+```json
+{
+    "browserInitTimeout": 180000
+}
+```
+
+* [runner.run Method](https://devexpress.github.io/testcafe/documentation/reference/testcafe-api/runner/run.html) parameter
+
+```js
+runner.run({ "browserInitTimeout": 180000 })
+```
+
+This setting sets an equal timeout for local and [remote browsers](https://devexpress.github.io/testcafe/documentation/guides/concepts/browsers.html#browsers-on-remote-devices).
+
+#### Improved `Unable To Establish Browser Connection` Error Message ([PR #5720](https://github.com/DevExpress/testcafe/pull/5720))
+
+TestCafe raises this error when at least one local or remote browser was not able to connect. The error message now includes the number of browsers that have not established a connection.
+
+TestCafe raises a warning if low system performance is causing the connectivity issue.
+
+#### :gear: An Option to Retry Requests for the Test Page ([PR #5738](https://github.com/DevExpress/testcafe/pull/5738))
+
+If a tested webpage was not served after the first request, TestCafe can now retry the request.
+
+You can enable this functionality with a command line, API, or configuration file option:
+
+* the [--retry-test-pages](https://devexpress.github.io/testcafe/documentation/using-testcafe/command-line-interface.html#--retry-test-pages) command line argument
+
+    ```sh
+    testcafe chrome test.js --retry-test-pages
+    ```
+
+* the [createTestCafe](https://devexpress.github.io/testcafe/documentation/reference/testcafe-api/global/createtestcafe.html) function parameter
+
+    ```js
+    const createTestCafe = require('testcafe');
+
+    const testcafe = await createTestCafe('localhost', 1337, 1338, retryTestPages)
+    ```
+
+* the [retryTestPages](https://devexpress.github.io/testcafe/documentation/using-testcafe/configuration-file.html#retrytestpages) configuration file property
+
+    ```json
+    {
+        "retryTestPages": true
+    }
+    ```
+
+### Bug Fixes
+
+* Fixed a bug where `Selector.withText` couldn't locate elements inside an `iframe` ([#5886](https://github.com/DevExpress/testcafe/issues/5886))
+* Fixed a bug where TestCafe was sometimes unable to detect when a browser instance closes ([#5857](https://github.com/DevExpress/testcafe/issues/5857))
+* You can now install TestCafe with `Yarn 2` ([PR #5872](https://github.com/DevExpress/testcafe/pull/5872) by [@NiavlysB](https://github.com/NiavlysB))
+* Fixed a bug where the `typeText` action does not always replace existing text ([PR #5942](https://github.com/DevExpress/testcafe/pull/5942) by [@rueyaa332266](https://github.com/rueyaa332266))
+* Fixed a bug where TestCafe was sometimes unable to create a `Web Worker` from an object ([testcafe-hammerhead/#2512](https://github.com/DevExpress/testcafe-hammerhead/issues/2512))
+* Fixed an error thrown by TestCafe proxy when trying to delete an object property that does not exist ([testcafe-hammerhead/#2504](https://github.com/DevExpress/testcafe-hammerhead/issues/2504))
+* Fixed an error thrown by TestCafe proxy when a Service Worker overwrites properties of a `window` object ([testcafe-hammerhead/#2538](https://github.com/DevExpress/testcafe-hammerhead/issues/2538))
+* Fixed a bug where `t.openWindow` method requested a URL twice ([testcafe-hammerhead/#2544](https://github.com/DevExpress/testcafe-hammerhead/issues/2544))
+* Fixed an error (`TypeError: Illegal invocation`) thrown by TestCafe on pages that contain an XMLDocument with an `iframe` ([testcafe-hammerhead/#2554](https://github.com/DevExpress/testcafe-hammerhead/issues/2554))
+* Fixed an error (`SyntaxError: Identifier has already been declared`) thrown by TestCafe on pages with scripts that create nested JavaScript objects ([testcafe-hammerhead/#2506](https://github.com/DevExpress/testcafe-hammerhead/issues/2506))
+* Fixed a bug where TestCafe was unable to focus elements within shadow DOM ([testcafe-hammerhead/#2408](https://github.com/DevExpress/testcafe-hammerhead/issues/2408))
+* TestCafe now throws an error when an entity of type other than `Error` is thrown in a test script ([PR testcafe-hammerhead/#2536](https://github.com/DevExpress/testcafe-hammerhead/pull/2536))
+* Fixed a bug where TestCafe was sometimes unable to resolve relative URLs ([testcafe-hammerhead/#2399](https://github.com/DevExpress/testcafe-hammerhead/issues/2399))
+* Properties of `window.location.constructor` are now shadowed correctly by TestCafe proxy ([testcafe-hammerhead/#2423](https://github.com/DevExpress/testcafe-hammerhead/issues/2423))
+* TestCafe proxy now correctly handles requests that are not permitted by the CORS policy ([testcafe-hammerhead/#1263](https://github.com/DevExpress/testcafe-hammerhead/issues/1263))
+* Improved compatibility with test pages that use `with` statements ([testcafe-hammerhead/#2434](https://github.com/DevExpress/testcafe-hammerhead/issues/2434))
+* TestCafe proxy can now properly parse statements that use a comma operator in `for..of` loops ([testcafe-hammerhead/#2573](https://github.com/DevExpress/testcafe-hammerhead/issues/2573))
+* Fixed a bug where TestCafe would open a new window even if `preventDefault` is present in element's event handler ([testcafe-hammerhead/#2582](https://github.com/DevExpress/testcafe-hammerhead/pull/2582))
+
+### Vulnerability Fix ([PR #5843](https://github.com/DevExpress/testcafe/pull/5843), [PR testcafe-hammerhead#2531](https://github.com/DevExpress/testcafe-hammerhead/pull/2531))
+
+We have fixed a vulnerability found in the [debug](https://www.npmjs.com/package/debug) module we use for debugging.
+The vulnerability was a [ReDos Vulnerability Regression](https://github.com/visionmedia/debug/issues/797) that affected all TestCafe users. TestCafe now uses `debug@4.3.1`, where the issue is fixed.
+
+## v1.10.1 (2020-12-24)
+
+### Bug Fixes
+
+* Fixed an error thrown when TestCafe runs TypeScript tests ([#5808](https://github.com/DevExpress/testcafe/issues/5808))
+* Implemented a Service Worker that allows TestCafe to re-try failed requests to the tested page. This improves test stability ([#5239](https://github.com/DevExpress/testcafe/issues/5239))
+* Fixed an error thrown when you call the `t.getBrowserConsoleMessages` method ([#5600](https://github.com/DevExpress/testcafe/issues/5600))
+
+## v1.10.0 (2020-12-15)
+
+### Enhancements
+
+#### Window Resize and Screenshot Support for Child Windows in Chrome ([PR #5661](https://github.com/DevExpress/testcafe/pull/5661), [PR #5567](https://github.com/DevExpress/testcafe/pull/5567))
+
+You can now use the following actions in Google Chrome when you switch the test context to a [child window](https://devexpress.github.io/testcafe/documentation/guides/advanced-guides/multiple-browser-windows.html):
+
+* [t.maximizeWindow](https://devexpress.github.io/testcafe/documentation/reference/test-api/testcontroller/maximize.html)
+* [t.resizeWindow](https://devexpress.github.io/testcafe/documentation/reference/test-api/testcontroller/resizewindow.html)
+* [t.resizeWindowToFitDevice](https://devexpress.github.io/testcafe/documentation/reference/test-api/testcontroller/resizewindowtofitdevice.html)
+* [t.takeElementScreenshot](https://devexpress.github.io/testcafe/documentation/reference/test-api/testcontroller/takeelementscreenshot.html)
+* [t.takeScreenshot](https://devexpress.github.io/testcafe/documentation/reference/test-api/testcontroller/takescreenshot.html)
+
+#### New API to Specify Compiler Options ([#5519](https://github.com/DevExpress/testcafe/issues/5519))
+
+In previous versions, you used the following methods to specify TypeScript compiler options:
+
+* the [--ts-config-path](https://devexpress.github.io/testcafe/documentation/reference/command-line-interface.html#--ts-config-path-path) command line flag
+
+    ```sh
+    testcafe chrome my-tests --ts-config-path path/to/config.json
+    ```
+
+* the [runner.tsConfigPath](https://devexpress.github.io/testcafe/documentation/reference/testcafe-api/runner/tsconfigpath.html) method
+
+    ```js
+    runner.tsConfigPath('path/to/config.json');
+    ```
+
+* the [tsConfigPath](https://devexpress.github.io/testcafe/documentation/reference/configuration-file.html#tsconfigpath) configuration file property
+
+    ```json
+    {
+        "tsConfigPath": "path/to/config.json"
+    }
+    ```
+
+In v1.10.0, we introduced a new easy-to-use API that allows you to specify the compiler options in the command line, API or TestCafe configuration file, without creating a separate JSON file. The new API is also designed to accept options for more compilers (for instance, Babel) in future releases.
+
+The API consists of the following members:
+
+* the [--compiler-options](https://devexpress.github.io/testcafe/documentation/reference/command-line-interface.html#--compiler-options-options) command line flag
+
+    ```sh
+    testcafe chrome my-tests --compiler-options typescript.experimentalDecorators=true
+    ```
+
+* the [runner.compilerOptions](https://devexpress.github.io/testcafe/documentation/reference/testcafe-api/runner/compileroptions.html) method
+
+    ```js
+    runner.compilerOptions({
+        typescript: {
+            experimentalDecorators: true
+        }
+    });
+    ```
+
+* the [compilerOptions](https://devexpress.github.io/testcafe/documentation/reference/configuration-file.html#compileroptions) configuration file property
+
+    ```json
+    {
+        "compilerOptions": {
+            "typescript": {
+                "experimentalDecorators": true
+            }
+        }
+    }
+    ```
+
+If you prefer to keep compiler settings in a configuration file, you can use the new API to specify the path to this file:
+
+```sh
+testcafe chrome my-tests --compiler-options typescript.configPath='path/to/config.json'
+```
+
+In v1.10.0, you can customize TypeScript compiler options only.
+
+For more information, see [TypeScript and CoffeeScript](https://devexpress.github.io/testcafe/documentation/guides/concepts/typescript-and-coffeescript.html).
+
+#### Added a Selector Method to Access Shadow DOM ([PR #5560](https://github.com/DevExpress/testcafe/pull/5560) by [@mostlyfabulous](https://github.com/mostlyfabulous))
+
+This release introduces the [selector.shadowRoot](https://devexpress.github.io/testcafe/documentation/reference/test-api/selector/shadowroot.html) method that allows you to access and interact with the shadow DOM elements. This method returns a shadow DOM root hosted in the selector's matched element.
+
+```js
+import { Selector } from 'testcafe'
+
+fixture `Target Shadow DOM elements`
+    .page('https://devexpress.github.io/testcafe/example')
+
+test('Get text within shadow tree', async t => {
+    const shadowRoot = Selector('div').withAttribute('id', 'shadow-host').shadowRoot();
+    const paragraph  = shadowRoot.child('p');
+
+    await t.expect(paragraph.textContent).eql('This paragraph is in the shadow tree');
+});
+```
+
+Note that you should chain other [selector methods](https://devexpress.github.io/testcafe/documentation/guides/basic-guides/select-page-elements.html#member-tables) to [selector.shadowRoot](https://devexpress.github.io/testcafe/documentation/reference/test-api/selector/shadowroot.html) to access elements in the shadow DOM. You cannot interact with the root element (an error occurs if you specify `selector.shadowRoot` as an action's target element).
+
+### Bug Fixes
+
+* Browsers now restart correctly on BrowserStack when the connection is lost ([#5238](https://github.com/DevExpress/testcafe/issues/5238))
+* Fixed an error that occurs if a child window is opened in an `iframe` ([#5033](https://github.com/DevExpress/testcafe/issues/5033))
+* TestCafe can now switch between the child and parent windows after the parent window is reloaded ([#5463](https://github.com/DevExpress/testcafe/issues/5463), [#5597](https://github.com/DevExpress/testcafe/issues/5597))
+* Fixed an issue when touch and mouse events fired on mobile devices even though the mouse event was prevented in page code ([#5380](https://github.com/DevExpress/testcafe/issues/5380))
+* Cross-domain `iframes` are now focused correctly in Safari ([#4793](https://github.com/DevExpress/testcafe/issues/4793))
+* Fixed an excessive warning displayed when an assertion is executed in a loop or against an element returned by a `selector.xxxSibling` method ([#5449](https://github.com/DevExpress/testcafe/issues/5449), [#5389](https://github.com/DevExpress/testcafe/issues/5389))
+* A page error is no longer emitted if the destination server responded with the `304` status ([#5025](https://github.com/DevExpress/testcafe/issues/5025))
+* Fixed an issue when TestCafe could not authenticate websites that use MSAL ([#4834](https://github.com/DevExpress/testcafe/issues/4834))
+* The `srcdoc` attributes for `iframes` are now processed ([testcafe-hammerhead/#1237](https://github.com/DevExpress/testcafe-hammerhead/issues/1237))
+* The `authorization` header is now preserved in response headers of fetch requests ([testcafe-hammerhead/#2334](https://github.com/DevExpress/testcafe-hammerhead/issues/2334))
+* The `document.title` for an `iframe` without `src` can now be correctly obtained in Firefox ([PR testcafe-hammerhead/#2466](https://github.com/DevExpress/testcafe-hammerhead/pull/2466))
+* TestCafe UI is now displayed correctly if the tested page's body content is added dynamically ([PR testcafe-hammerhead/#2454](https://github.com/DevExpress/testcafe-hammerhead/pull/2454))
+* Service Workers now receive `fetch` events ([testcafe-hammerhead/#2412](https://github.com/DevExpress/testcafe-hammerhead/issues/2412))
+* Fixed the case of headers sent to the web app server ([testcafe-hammerhead/#2344](https://github.com/DevExpress/testcafe-hammerhead/issues/2344))
+* `Location` objects in `iframes` without `src` now contain the correct data ([PR testcafe-hammerhead/#2448](https://github.com/DevExpress/testcafe-hammerhead/pull/2448))
+* Native function wrappers are now converted to strings correctly ([testcafe-hammerhead/#2394](https://github.com/DevExpress/testcafe-hammerhead/issues/2394))
+* Values retrieved from the local storage are now converted to strings ([testcafe-hammerhead/#2313](https://github.com/DevExpress/testcafe-hammerhead/issues/2313))
+* Fixed an issue when relative URLs were resolved incorrectly in `iframes` ([testcafe-hammerhead/#2461](https://github.com/DevExpress/testcafe-hammerhead/issues/2461))
+* Fixed an issue when TestCafe took a very long time to process large CSS files ([testcafe-hammerhead/#2475](https://github.com/DevExpress/testcafe-hammerhead/issues/2475))
+* Fixed an issue with client-side JavaScript processing ([testcafe-hammerhead/#2442](https://github.com/DevExpress/testcafe-hammerhead/issues/2442))
+* Fixed an issue that suppressed Adobe Launch Analytics requests ([testcafe-hammerhead/#2453](https://github.com/DevExpress/testcafe-hammerhead/issues/2453))
+* Added support for Web Workers created from Blob URLs ([testcafe-hammerhead/#1221](https://github.com/DevExpress/testcafe-hammerhead/issues/1221))
+* Fixed an issue when network requests were not received by the server ([testcafe-hammerhead/#2467](https://github.com/DevExpress/testcafe-hammerhead/issues/2467))
+* Cross-domain `iframe` source links now have the correct protocol when SSL is used ([PR testcafe-hammerhead/#2478](https://github.com/DevExpress/testcafe-hammerhead/pull/2478))
+
+## v1.9.4 (2020-10-2)
+
+### Bug Fixes
+
+* Fixed an error thrown when TestCafe tested pages that access `document.title` ([#5559](https://github.com/DevExpress/testcafe/issues/5559), [PR testcafe-hammerhead/#2451](https://github.com/DevExpress/testcafe-hammerhead/pull/2451), [PR testcafe-hammerhead/#2446](https://github.com/DevExpress/testcafe-hammerhead/pull/2446))
+* Fixed a crash occurred when `null` was passed to the `createTestCafe()` API function ([#5549](https://github.com/DevExpress/testcafe/issues/5549))
+* Fixed an error thrown when the `content-encoding` header value was in the upper case ([testcafe-hammerhead/#2427](https://github.com/DevExpress/testcafe-hammerhead/issues/2427))
+* Fixed a crash that occurred in IE11 when Web Workers were used ([PR testcafe-hammerhead/#2441](https://github.com/DevExpress/testcafe-hammerhead/pull/2441) by [@danielroe](https://github.com/danielroe))
+* HTML nodes are now ordered correctly on tested web pages with Shadow UI ([PR testcafe-hammerhead/#2447](https://github.com/DevExpress/testcafe-hammerhead/pull/2447))
+
+## v1.9.3 (2020-9-17)
+
+### Bug Fixes
+
+* Fixed the `RequestMock` type definitions to accept any type for the headers ([#5529](https://github.com/DevExpress/testcafe/issues/5529))
+* TestCafe no longer displays a warning about missing `await` when you save a snapshot property to a variable but do not use it later in the test ([#5534](https://github.com/DevExpress/testcafe/issues/5534))
+* Consecutive `document.getElementsByTagName('body')` calls now produce the correct results even if the first call was made before a document body was parsed entirely ([#5322](https://github.com/DevExpress/testcafe/issues/5322))
+
 ## v1.9.2 (2020-9-2)
 
 ### Bug Fixes
@@ -556,7 +1092,7 @@ If tests run correctly without page caching, we recommend that you adjust the se
 
 ### Bug Fixes
 
-* Fixed an error that occured when a selector matched an `<svg>` element ([#3684](https://github.com/DevExpress/testcafe/issues/3684))
+* Fixed an error that occurred when a selector matched an `<svg>` element ([#3684](https://github.com/DevExpress/testcafe/issues/3684))
 * Fixed an issue when the `reporter` configuration file option was not applied ([#4234](https://github.com/DevExpress/testcafe/issues/4234))
 * Fixed a warning message about invalid `tsconfig.json` file ([#4154](https://github.com/DevExpress/testcafe/issues/4154))
 * `LiveRunner.stop()` now closes the browsers ([#4107](https://github.com/DevExpress/testcafe/issues/4107))
@@ -669,7 +1205,7 @@ You can specify the scripts to inject as follows:
 
     ```js
     fixture `My fixture`
-        .clientScripts({ content: 'Geolocation.prototype.getCurrentPosition = () => new Positon(0, 0);' });
+        .clientScripts({ content: 'Geolocation.prototype.getCurrentPosition = () => new Position(0, 0);' });
     ```
 
 For more information, see [Inject Scripts into Tested Pages](https://devexpress.github.io/testcafe/documentation/using-testcafe/common-concepts/inject-scripts-into-tested-pages.html).
@@ -1203,7 +1739,7 @@ TestCafe [programming interface](https://devexpress.github.io/testcafe/documenta
 You no longer need to use `fs.createWriteStream` to create a stream that writes a report to a file. You can now pass the file name as the [runner.reporter](https://devexpress.github.io/testcafe/documentation/using-testcafe/programming-interface/runner.html#reporter) parameter.
 
 ```js
-runnner.reporter('json', 'reports/report.json');
+runner.reporter('json', 'reports/report.json');
 ```
 
 ### Bug Fixes
@@ -1446,12 +1982,12 @@ When you use a programming API, pass the HTTPS server options to the [createTest
 'use strict';
 
 const createTestCafe        = require('testcafe');
-const selfSignedSertificate = require('openssl-self-signed-certificate');
+const selfSignedCertificate = require('openssl-self-signed-certificate');
 let runner                  = null;
 
 const sslOptions = {
-    key:  selfSignedSertificate.key,
-    cert: selfSignedSertificate.cert
+    key:  selfSignedCertificate.key,
+    cert: selfSignedCertificate.cert
 };
 
 createTestCafe('localhost', 1337, 1338, sslOptions)
@@ -2299,7 +2835,7 @@ Now, you have no need to type a unique link for each test run, all the links bec
 * The `window.history.replaceState` function is overridden incorrectly ([testcafe-hammerhead/#1146](https://github.com/DevExpress/testcafe-hammerhead/issues/1146))
 * Hammerhead crashes if a script file contains a sourcemap comment ([testcafe-hammerhead/#1052](https://github.com/DevExpress/testcafe-hammerhead/issues/1052))
 * The proxy should override the `DOMParser.parseFromString` method ([testcafe-hammerhead/#1133](https://github.com/DevExpress/testcafe-hammerhead/issues/1133))
-* The `fetch` method should emulate the native behaviour on merging headers ([testcafe-hammerhead/#1116](https://github.com/DevExpress/testcafe-hammerhead/issues/1116))
+* The `fetch` method should emulate the native behavior on header merge ([testcafe-hammerhead/#1116](https://github.com/DevExpress/testcafe-hammerhead/issues/1116))
 * The `EventSource` requests are broken when used via proxy ([testcafe-hammerhead/#1106](https://github.com/DevExpress/testcafe-hammerhead/issues/1106))
 * The code processing may cause syntax errors in some cases because of wrong `location` property wrapping ([testcafe-hammerhead/#1101](https://github.com/DevExpress/testcafe-hammerhead/issues/1101))
 * When calling the `fetch` function without parameters, we should return its native result instead of `window.Promise.reject` ([testcafe-hammerhead/#1099](https://github.com/DevExpress/testcafe-hammerhead/issues/1099))
@@ -2977,7 +3513,7 @@ The `t.takeScreenshot`, `t.resizeWindow`, `t.resizeWindowToFitDevice` and `t.max
 
 The state of webpage elements can now be extended with custom properties.
 
-We have added the [addCustomDOMProperties](https://devexpress.github.io/testcafe/documentation/test-api/selecting-page-elements/selectors.html#adding-custom-properties-to-element-state)
+We have added the [addCust.htmlOMProperties](https://devexpress.github.io/testcafe/documentation/test-api/selecting-page-elements/selectors.html#adding-custom-properties-to-element-state)
 method to the selector, so that you can add properties to the element state like in the following example.
 
 ```js
@@ -2987,7 +3523,7 @@ fixture `My fixture`
     .page `https://devexpress.github.io/testcafe/example/`;
 
 test('Check Label HTML', async t => {
-    const label = Selector('label').addCustomDOMProperties({
+    const label = Selector('label').addCust.htmlOMProperties({
         innerHTML: el => el.innerHTML
     });
 
@@ -3187,15 +3723,15 @@ Get it to ensure that ESLint does not fail on TestCafe test code.
 * Onclick event handler is now executed correctly during click automation in specific cases ([#1138](https://github.com/DevExpress/testcafe/issues/1138))
 * The `application/pdf` mime type is no longer recognized as a page ([testcafe-hammerhead#1014](https://github.com/DevExpress/testcafe-hammerhead/issues/1014))
 * Limited support for the `frameset` tag is implemented ([testcafe-hammerhead#1009](https://github.com/DevExpress/testcafe-hammerhead/issues/1009))
-* `Function.prototype.toString` is now proxied correctly when it is overriden in a user script ([testcafe-hammerhead#999](https://github.com/DevExpress/testcafe-hammerhead/issues/999))
+* `Function.prototype.toString` is now proxied correctly when it is overridden in a user script ([testcafe-hammerhead#999](https://github.com/DevExpress/testcafe-hammerhead/issues/999))
 * Script processing no longer hangs on chained assignments ([testcafe-hammerhead#866](https://github.com/DevExpress/testcafe-hammerhead/issues/866))
 * `formaction` attribute is now processed ([testcafe-hammerhead#988](https://github.com/DevExpress/testcafe-hammerhead/issues/988))
-* `document.styleSheets` is now overrided ([testcafe-hammerhead#1000](https://github.com/DevExpress/testcafe-hammerhead/issues/1000))
+* `document.styleSheets` is now overridden ([testcafe-hammerhead#1000](https://github.com/DevExpress/testcafe-hammerhead/issues/1000))
 * `href` attribute is now processed correctly in an iframe without src when it is set from the main window ([testcafe-hammerhead#620](https://github.com/DevExpress/testcafe-hammerhead/issues/620))
 * Cookies without a key are now set correctly ([testcafe-hammerhead#899](https://github.com/DevExpress/testcafe-hammerhead/issues/899))
 * The `noscript` tag is now processed correctly when it was added via `innerHTML` ([testcafe-hammerhead#987](https://github.com/DevExpress/testcafe-hammerhead/issues/987))
-* `Element.insertAdjacentHTML` function is now overrided in IE ([testcafe-hammerhead#954](https://github.com/DevExpress/testcafe-hammerhead/issues/954))
-* Browser behaviour is now emulated correctly when the cookie size is bigger than the browser limit ([testcafe-hammerhead#767](https://github.com/DevExpress/testcafe-hammerhead/issues/767))
+* `Element.insertAdjacentHTML` function is now overridden in IE ([testcafe-hammerhead#954](https://github.com/DevExpress/testcafe-hammerhead/issues/954))
+* Browser behavior is now emulated correctly when the cookie size is bigger than the browser limit ([testcafe-hammerhead#767](https://github.com/DevExpress/testcafe-hammerhead/issues/767))
 
 ## v0.11.1 (2016-12-8)
 

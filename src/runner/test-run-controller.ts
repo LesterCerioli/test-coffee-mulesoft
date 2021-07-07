@@ -10,69 +10,13 @@ import Screenshots from '../screenshots';
 import WarningLog from '../notifications/warning-log';
 import FixtureHookController from './fixture-hook-controller';
 import { Dictionary } from '../configuration/interfaces';
-import { ActionEventArg } from './interfaces';
-import TestRunErrorFormattableAdapter from '../errors/test-run/formattable-adapter';
+import { ActionEventArg, TestRunControllerInit } from './interfaces';
+import CompilerService from '../services/compiler/host';
+import { Quarantine } from '../utils/get-options/quarantine';
 
 let QUARANTINE_THRESHOLD = 1;
 let DISCONNECT_THRESHOLD = 1;
 
-interface AttemptResult {
-    failedTimes: number;
-    passedTimes: number;
-}
-
-class Quarantine {
-    public attempts: TestRunErrorFormattableAdapter[][];
-
-    public constructor () {
-        this.attempts = [];
-        if (process.env.MAX_QUARANTINE_RETRIES) {
-            DISCONNECT_THRESHOLD = parseInt(process.env.MAX_QUARANTINE_RETRIES.toString(), 10);
-            QUARANTINE_THRESHOLD = parseInt(process.env.MAX_QUARANTINE_RETRIES.toString(), 10);
-        }
-    }
-
-    public getFailedAttempts (): TestRunErrorFormattableAdapter[][] {
-        return this.attempts.filter(errors => !!errors.length);
-    }
-
-    public getPassedAttempts (): TestRunErrorFormattableAdapter[][] {
-        return this.attempts.filter(errors => errors.length === 0);
-    }
-
-    public getNextAttemptNumber (): number {
-        return this.attempts.length + 1;
-    }
-
-    public isThresholdReached (extraErrors?: TestRunErrorFormattableAdapter[]): boolean {
-        const { failedTimes, passedTimes } = this._getAttemptsResult(extraErrors);
-
-        const failedThresholdReached = failedTimes >= QUARANTINE_THRESHOLD;
-        const passedThresholdReached = passedTimes >= QUARANTINE_THRESHOLD;
-
-        return failedThresholdReached || passedThresholdReached;
-    }
-
-    public isFirstAttemptSuccessful (extraErrors: TestRunErrorFormattableAdapter[]): boolean {
-        const { failedTimes, passedTimes } = this._getAttemptsResult(extraErrors);
-
-        return failedTimes === 0 && passedTimes > 0;
-    }
-
-    private _getAttemptsResult (extraErrors?: TestRunErrorFormattableAdapter[]): AttemptResult {
-        let failedTimes = this.getFailedAttempts().length;
-        let passedTimes = this.getPassedAttempts().length;
-
-        if (extraErrors) {
-            if (extraErrors.length)
-                failedTimes += extraErrors.length;
-            else
-                passedTimes += 1;
-        }
-
-        return { failedTimes, passedTimes };
-    }
-}
 
 export default class TestRunController extends AsyncEventEmitter {
     private readonly _quarantine: null | Quarantine;
@@ -87,13 +31,28 @@ export default class TestRunController extends AsyncEventEmitter {
     private readonly _testRunCtor: LegacyTestRun['constructor'] | TestRun['constructor'];
     public testRun: null | LegacyTestRun | TestRun;
     public done: boolean;
+    private readonly compilerService?: CompilerService;
 
-    public constructor (test: Test, index: number, proxy: Proxy, screenshots: Screenshots, warningLog: WarningLog, fixtureHookController: FixtureHookController, opts: Dictionary<OptionValue>) {
+    public constructor ({
+        test,
+        index,
+        proxy,
+        screenshots,
+        warningLog,
+        fixtureHookController,
+        opts,
+        compilerService
+    }: TestRunControllerInit) {
         super();
+
+        if (process.env.MAX_QUARANTINE_RETRIES) {
+            DISCONNECT_THRESHOLD = parseInt(process.env.MAX_QUARANTINE_RETRIES.toString(), 10);
+            QUARANTINE_THRESHOLD = parseInt(process.env.MAX_QUARANTINE_RETRIES.toString(), 10);
+        }
 
         this.test  = test;
         this.index = index;
-        this._opts  = opts;
+        this._opts = opts;
 
         this._proxy                 = proxy;
         this._screenshots           = screenshots;
@@ -103,9 +62,10 @@ export default class TestRunController extends AsyncEventEmitter {
         this._testRunCtor = TestRunController._getTestRunCtor(test, opts);
 
         this.testRun             = null;
-        this.done               = false;
+        this.done                = false;
         this._quarantine         = this._opts.quarantineMode ? new Quarantine() : null;
         this._disconnectionCount = 0;
+        this.compilerService     = compilerService;
     }
 
     private static _getTestRunCtor (test: Test, opts: Dictionary<OptionValue>): LegacyTestRun | TestRun {
@@ -119,12 +79,27 @@ export default class TestRunController extends AsyncEventEmitter {
         const screenshotCapturer = this._screenshots.createCapturerFor(this.test, this.index, this._quarantine, connection, this._warningLog);
         const TestRunCtor        = this._testRunCtor;
 
-        this.testRun = new TestRunCtor(this.test, connection, screenshotCapturer, this._warningLog, this._opts);
+        this.testRun = new TestRunCtor({
+            test:              this.test,
+            browserConnection: connection,
+            globalWarningLog:  this._warningLog,
+            opts:              this._opts,
+            compilerService:   this.compilerService,
+            screenshotCapturer
+        });
+
+        await this.testRun.initialize();
 
         this._screenshots.addTestRun(this.test, this.testRun);
 
         if (this.testRun.addQuarantineInfo)
             this.testRun.addQuarantineInfo(this._quarantine);
+
+        if (this._quarantine) {
+            const { successThreshold, attemptLimit } = this._opts.quarantineMode as QuarantineOptionValue;
+
+            this._quarantine.setCustomParameters(attemptLimit, successThreshold);
+        }
 
         if (!this._quarantine || this._isFirstQuarantineAttempt()) {
             await this.emit('test-run-create', {
@@ -256,6 +231,7 @@ export default class TestRunController extends AsyncEventEmitter {
 
         if (this.test.skip || !hookOk) {
             await this.emit('test-run-start');
+            await this.emit('test-run-before-done');
             await this._emitTestRunDone();
 
             return null;

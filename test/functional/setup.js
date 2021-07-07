@@ -53,7 +53,7 @@ function getBrowserInfo (settings) {
 
             return browserProviderPool
                 .getBrowserInfo(settings.browserName)
-                .then(browserInfo => new BrowserConnection(testCafe.browserConnectionGateway, browserInfo, true));
+                .then(browserInfo => new BrowserConnection(testCafe.browserConnectionGateway, browserInfo, true, false, config.isProxyless));
         })
         .then(connection => {
             return {
@@ -153,7 +153,8 @@ before(function () {
 
         retryTestPages,
 
-        experimentalCompilerService: !!process.env.EXPERIMENTAL_COMPILER_SERVICE
+        experimentalCompilerService: !!process.env.EXPERIMENTAL_COMPILER_SERVICE,
+        isProxyless:                 config.isProxyless
     };
 
     return createTestCafe(testCafeOptions)
@@ -198,6 +199,9 @@ before(function () {
                 const screenshotPath              = opts && opts.setScreenshotPath ? config.testScreenshotsDir : '';
                 const videoPath                   = opts && opts.setVideoPath ? config.testVideosDir : '';
                 const clientScripts               = opts && opts.clientScripts || [];
+                const compilerOptions             = opts && opts.compilerOptions;
+
+                testCafe.runner = runner;
 
                 const {
                     skipJsErrors,
@@ -220,7 +224,9 @@ before(function () {
                     disablePageCaching,
                     disablePageReloads,
                     disableScreenshots,
-                    disableMultipleWindows
+                    disableMultipleWindows,
+                    pageRequestTimeout,
+                    ajaxRequestTimeout
                 } = opts;
 
                 const actualBrowsers = browsersInfo.filter(browserInfo => {
@@ -269,6 +275,7 @@ before(function () {
                     .video(videoPath, videoOptions, videoEncodingOptions)
                     .startApp(appCommand, appInitDelay)
                     .clientScripts(clientScripts)
+                    .compilerOptions(compilerOptions)
                     .run({
                         skipJsErrors,
                         quarantineMode,
@@ -281,7 +288,9 @@ before(function () {
                         disablePageCaching,
                         disablePageReloads,
                         disableScreenshots,
-                        disableMultipleWindows
+                        disableMultipleWindows,
+                        pageRequestTimeout,
+                        ajaxRequestTimeout
                     })
                     .then(failedCount => {
                         if (customReporters)

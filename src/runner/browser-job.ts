@@ -10,6 +10,8 @@ import WarningLog from '../notifications/warning-log';
 import FixtureHookController from './fixture-hook-controller';
 import { Dictionary } from '../configuration/interfaces';
 import BrowserJobResult from './browser-job-result';
+import CompilerService from '../services/compiler/host';
+import { BrowserJobInit } from './interfaces';
 
 interface BrowserJobResultInfo {
     status: BrowserJobResult;
@@ -31,8 +33,18 @@ export default class BrowserJob extends AsyncEventEmitter {
     private readonly _reportsPending: TestRunController[];
     private readonly _connectionErrorListener: (error: Error) => void;
     private readonly _completionQueue: TestRunController[];
+    private _resolveWaitingLastTestInFixture: Function | null;
 
-    public constructor (tests: Test[], browserConnections: BrowserConnection[], proxy: Proxy, screenshots: Screenshots, warningLog: WarningLog, fixtureHookController: FixtureHookController, opts: Dictionary<OptionValue>) {
+    public constructor ({
+        tests,
+        browserConnections,
+        proxy,
+        screenshots,
+        warningLog,
+        fixtureHookController,
+        opts,
+        compilerService
+    }: BrowserJobInit) {
         super();
 
         this._started = false;
@@ -47,19 +59,29 @@ export default class BrowserJob extends AsyncEventEmitter {
         this.fixtureHookController = fixtureHookController;
         this._result               = null;
 
-        this._testRunControllerQueue = tests.map((test, index) => this._createTestRunController(test, index));
+        this._testRunControllerQueue = tests.map((test, index) => this._createTestRunController(test, index, compilerService));
 
         this._completionQueue = [];
         this._reportsPending  = [];
 
         this._connectionErrorListener = (error: Error) => this._setResult(BrowserJobResult.errored, error);
 
+        this._resolveWaitingLastTestInFixture = null;
+
         this.browserConnections.map(bc => bc.once('error', this._connectionErrorListener));
     }
 
-    private _createTestRunController (test: Test, index: number): TestRunController {
-        const testRunController = new TestRunController(test, index + 1, this._proxy, this._screenshots, this.warningLog,
-            this.fixtureHookController, this._opts);
+    private _createTestRunController (test: Test, index: number, compilerService?: CompilerService): TestRunController {
+        const testRunController = new TestRunController({
+            test,
+            index:                 index + 1,
+            proxy:                 this._proxy,
+            screenshots:           this._screenshots,
+            warningLog:            this.warningLog,
+            fixtureHookController: this.fixtureHookController,
+            opts:                  this._opts,
+            compilerService
+        });
 
         testRunController.on('test-run-create', async testRunInfo => {
             await this.emit('test-run-create', testRunInfo);
@@ -123,6 +145,12 @@ export default class BrowserJob extends AsyncEventEmitter {
             await this.emit('test-run-done', testRunController.testRun);
 
             remove(this._reportsPending, testRunController);
+
+            if (!this._reportsPending.length && this._resolveWaitingLastTestInFixture) {
+                this._resolveWaitingLastTestInFixture();
+
+                this._resolveWaitingLastTestInFixture = null;
+            }
         }
 
         if (!this._completionQueue.length && !this.hasQueuedTestRuns) {
@@ -135,6 +163,32 @@ export default class BrowserJob extends AsyncEventEmitter {
         }
     }
 
+    private async _isNextTestRunAvailable (testRunController: TestRunController): Promise<boolean> {
+        // NOTE: before hook for test run fixture is currently
+        // executing, so test run is temporary blocked
+        const isBlocked                 = testRunController.blocked;
+        const isConcurrency             = this._opts.concurrency as number > 1;
+        const hasIncompleteTestRuns     = this._completionQueue.some(controller => !controller.done);
+        const needWaitLastTestInFixture = this._reportsPending.some(controller => controller.test.fixture !== testRunController.test.fixture);
+
+        if (isBlocked || (hasIncompleteTestRuns || needWaitLastTestInFixture) && !isConcurrency) {
+            const disablePageReloads = testRunController.test.disablePageReloads ||
+                this._opts.disablePageReloads && testRunController.test.disablePageReloads !== false;
+
+            if (!needWaitLastTestInFixture || !disablePageReloads)
+                return false;
+
+            // NOTE: if we have `disablePageReloads` enabled and the next test is from next
+            // fixture, then we need to wait until all reporters finished to prevent
+            // redirecting to the `idle` page
+            await new Promise(resolve => {
+                this._resolveWaitingLastTestInFixture = resolve;
+            });
+        }
+
+        return true;
+    }
+
     // API
     public get hasQueuedTestRuns (): boolean {
         return !!this._testRunControllerQueue.length;
@@ -142,15 +196,11 @@ export default class BrowserJob extends AsyncEventEmitter {
 
     public async popNextTestRunUrl (connection: BrowserConnection): Promise<string | null> {
         while (this._testRunControllerQueue.length) {
-            // NOTE: before hook for test run fixture is currently
-            // executing, so test run is temporary blocked
-            const testRunController         = this._testRunControllerQueue[0];
-            const isBlocked                 = testRunController.blocked;
-            const isConcurrency             = this._opts.concurrency as number > 1;
-            const hasIncompleteTestRuns     = this._completionQueue.some(controller => !controller.done);
-            const needWaitLastTestInFixture = this._reportsPending.some(controller => controller.test.fixture !== testRunController.test.fixture);
+            const testRunController = this._testRunControllerQueue[0];
 
-            if (isBlocked || (hasIncompleteTestRuns || needWaitLastTestInFixture) && !isConcurrency)
+            const isNextTestRunAvailable = await this._isNextTestRunAvailable(testRunController);
+
+            if (!isNextTestRunAvailable)
                 break;
 
             this._reportsPending.push(testRunController);

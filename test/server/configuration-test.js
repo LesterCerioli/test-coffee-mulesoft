@@ -4,10 +4,14 @@ const { expect }    = require('chai');
 const fs            = require('fs');
 const tmp           = require('tmp');
 const nanoid        = require('nanoid');
+const del           = require('del');
+const pathUtil      = require('path');
 
 const TestCafeConfiguration                   = require('../../lib/configuration/testcafe-configuration');
 const TypeScriptConfiguration                 = require('../../lib/configuration/typescript-configuration');
 const { DEFAULT_TYPESCRIPT_COMPILER_OPTIONS } = require('../../lib/configuration/default-values');
+const RunnerCtor                              = require('../../lib/runner');
+const OptionNames                             = require('../../lib/configuration/option-names');
 const consoleWrapper                          = require('./helpers/console-wrapper');
 
 const tsConfigPath           = 'tsconfig.json';
@@ -21,7 +25,11 @@ const createConfigFile = (path, options) => {
 const createTestCafeConfigurationFile   = createConfigFile.bind(null, TestCafeConfiguration.FILENAME);
 const createTypeScriptConfigurationFile = createConfigFile.bind(null, tsConfigPath);
 
-describe('TestCafeConfiguration', () => {
+const TEST_TIMEOUT = 5000;
+
+describe('TestCafeConfiguration', function () {
+    this.timeout(TEST_TIMEOUT);
+
     const testCafeConfiguration = new TestCafeConfiguration();
     let keyFileContent          = null;
 
@@ -43,7 +51,7 @@ describe('TestCafeConfiguration', () => {
                 'key':                keyFile.name,
                 'rejectUnauthorized': 'true'
             },
-            'browsers':    'ie',
+            'browsers':    'remote',
             'concurrency': 0.5,
             'filter':      {
                 'fixture':     'testFixture',
@@ -57,9 +65,8 @@ describe('TestCafeConfiguration', () => {
         });
     });
 
-    afterEach(() => {
-        if (fs.existsSync(testCafeConfiguration.filePath))
-            fs.unlinkSync(testCafeConfiguration.filePath);
+    afterEach(async () => {
+        await del([testCafeConfiguration.filePath]);
 
         consoleWrapper.unwrap();
         consoleWrapper.messages.clear();
@@ -90,8 +97,9 @@ describe('TestCafeConfiguration', () => {
 
                         expect(ssl.key).eql(keyFileContent);
                         expect(ssl.rejectUnauthorized).eql(true);
-                        expect(testCafeConfiguration.getOption('src')).eql([ 'path1/folder' ]);
-                        expect(testCafeConfiguration.getOption('browsers')).eql([ 'ie' ]);
+                        expect(testCafeConfiguration.getOption('src')).eql(['path1/folder']);
+                        expect(testCafeConfiguration.getOption('browsers')).to.be.an('array').that.not.empty;
+                        expect(testCafeConfiguration.getOption('browsers')[0]).to.include({ providerName: 'remote' });
                         expect(testCafeConfiguration.getOption('concurrency')).eql(0.5);
                         expect(testCafeConfiguration.getOption('filter')).to.be.a('function');
                         expect(testCafeConfiguration.getOption('filter').testGrep.test('test1')).to.be.true;
@@ -314,7 +322,7 @@ describe('TestCafeConfiguration', () => {
                     expect(testCafeConfiguration.getOption('hostname')).eql('anotherHostname');
                     expect(testCafeConfiguration.getOption('port1')).eql('anotherPort1');
                     expect(testCafeConfiguration.getOption('port2')).eql('anotherPort2');
-                    expect(consoleWrapper.messages.log).eql('The "hostname", "port1", "port2" options from the configuration file will be ignored.');
+                    expect(consoleWrapper.messages.log).eql('The "hostname", "port1", and "port2" options from the configuration file will be ignored.');
                 });
         });
 
@@ -327,9 +335,67 @@ describe('TestCafeConfiguration', () => {
                 });
         });
     });
+
+    describe('Should copy value from "tsConfigPath" to compiler options', () => {
+        it('only tsConfigPath is specified', () => {
+            const configuration = new TestCafeConfiguration();
+            const runner        = new RunnerCtor({ configuration });
+
+            return runner
+                .tsConfigPath('path-to-ts-config')
+                ._applyOptions()
+                .then(() => {
+                    expect(runner.configuration.getOption(OptionNames.compilerOptions)).eql({
+                        'typescript': {
+                            configPath: 'path-to-ts-config'
+                        }
+                    });
+                });
+        });
+
+        it('tsConfigPath is specified and compiler options are "undefined"', () => {
+            const configuration = new TestCafeConfiguration();
+            const runner        = new RunnerCtor({ configuration });
+
+            return runner
+                .tsConfigPath('path-to-ts-config')
+                .compilerOptions(void 0) // emulate command-line run
+                ._applyOptions()
+                .then(() => {
+                    expect(runner.configuration.getOption(OptionNames.compilerOptions)).eql({
+                        'typescript': {
+                            configPath: 'path-to-ts-config'
+                        }
+                    });
+                });
+        });
+
+        it('both "tsConfigPath" and compiler options are specified', () => {
+            const configuration = new TestCafeConfiguration();
+            const runner        = new RunnerCtor({ configuration });
+
+            return runner
+                .tsConfigPath('path-to-ts-config')
+                .compilerOptions({
+                    'typescript': {
+                        configPath: 'path-in-compiler-options'
+                    }
+                })
+                ._applyOptions()
+                .then(() => {
+                    expect(runner.configuration.getOption(OptionNames.compilerOptions)).eql({
+                        'typescript': {
+                            configPath: 'path-in-compiler-options'
+                        }
+                    });
+                });
+        });
+    });
 });
 
-describe('TypeScriptConfiguration', () => {
+describe('TypeScriptConfiguration', function () {
+    this.timeout(TEST_TIMEOUT);
+
     const typeScriptConfiguration = new TypeScriptConfiguration(tsConfigPath);
 
     it('Default', () => {
@@ -353,7 +419,7 @@ describe('TypeScriptConfiguration', () => {
             message = err.message;
         }
 
-        expect(message).eql(`Unable to find the TypeScript configuration file in "${nonExistingConfiguration.filePath}"`);
+        expect(message).eql(`"${nonExistingConfiguration.filePath}" is not a valid TypeScript configuration file.`);
     });
 
     it('Config is not well-formed', () => {
@@ -363,6 +429,7 @@ describe('TypeScriptConfiguration', () => {
         return typeScriptConfiguration.init()
             .then(() => {
                 consoleWrapper.unwrap();
+                fs.unlinkSync(tsConfigPath);
 
                 expect(typeScriptConfiguration.getOption('hostname')).eql(void 0);
                 expect(consoleWrapper.messages.log).contains(`Failed to parse the '${typeScriptConfiguration.filePath}' file.`);
@@ -377,9 +444,8 @@ describe('TypeScriptConfiguration', () => {
             consoleWrapper.wrap();
         });
 
-        afterEach(() => {
-            if (typeScriptConfiguration.filePath)
-                fs.unlinkSync(typeScriptConfiguration.filePath);
+        afterEach(async () => {
+            await del([typeScriptConfiguration.filePath, customTSConfigFilePath]);
 
             consoleWrapper.unwrap();
             consoleWrapper.messages.clear();
@@ -486,9 +552,7 @@ describe('TypeScriptConfiguration', () => {
                 });
         });
 
-        it('TestCafe config + TypeScript config', () => {
-            let runner = null;
-
+        it('TestCafe config + TypeScript config', function () {
             createTestCafeConfigurationFile({
                 tsConfigPath: customTSConfigFilePath
             });
@@ -500,16 +564,12 @@ describe('TypeScriptConfiguration', () => {
             });
 
             const configuration = new TestCafeConfiguration();
+            const runner        = new RunnerCtor({ configuration });
 
-            return configuration.init()
+            return runner
+                .src('test/server/data/test-suites/typescript-basic/testfile1.ts')
+                ._applyOptions()
                 .then(() => {
-                    const RunnerCtor = require('../../lib/runner');
-
-                    runner = new RunnerCtor(null, null, configuration);
-
-                    runner.src('test/server/data/test-suites/typescript-basic/testfile1.ts');
-                    runner._setBootstrapperOptions();
-
                     return runner.bootstrapper._getTests();
                 })
                 .then(() => {
@@ -521,29 +581,108 @@ describe('TypeScriptConfiguration', () => {
                 });
         });
 
-        it('Runner + TypeScript config', () => {
-            let runner = null;
+        describe('Should warn message on rewrite a non-overridable property', () => {
+            it('TypeScript config', function () {
+                let runner = null;
 
-            createConfigFile(customTSConfigFilePath, {
-                compilerOptions: {
-                    target: 'es5'
-                }
+                createConfigFile(customTSConfigFilePath, {
+                    compilerOptions: {
+                        target: 'es5'
+                    }
+                });
+
+                runner = new RunnerCtor({ configuration: new TestCafeConfiguration() });
+
+                runner.src('test/server/data/test-suites/typescript-basic/testfile1.ts');
+                runner.tsConfigPath(customTSConfigFilePath);
+                runner._setBootstrapperOptions();
+
+                return runner._applyOptions()
+                    .then(() => runner.bootstrapper._getTests())
+                    .then(() => {
+                        typeScriptConfiguration._filePath = customTSConfigFilePath;
+
+                        expect(runner.bootstrapper.tsConfigPath).eql(customTSConfigFilePath);
+                        expect(consoleWrapper.messages.log).contains('You cannot override the "target" compiler option in the TypeScript configuration file.');
+                    });
             });
 
-            const RunnerCtor = require('../../lib/runner');
+            it('Custom compiler options', () => {
+                const runner = new RunnerCtor({ configuration: new TestCafeConfiguration() });
 
-            runner = new RunnerCtor(null, null, new TestCafeConfiguration());
+                runner
+                    .src('test/server/data/test-suites/typescript-basic/testfile1.ts')
+                    .compilerOptions({
+                        'typescript': {
+                            'options': { target: 'es5' }
+                        }
+                    });
 
-            runner.src('test/server/data/test-suites/typescript-basic/testfile1.ts');
-            runner.tsConfigPath(customTSConfigFilePath);
-            runner._setBootstrapperOptions();
+                return runner._applyOptions()
+                    .then(() => runner.bootstrapper._getTests())
+                    .then(() => {
+                        expect(consoleWrapper.messages.log).contains('You cannot override the "target" compiler option in the TypeScript configuration file.');
+                    });
+            });
+        });
+    });
 
-            return runner.bootstrapper._getTests()
+    describe('Custom Testcafe Config Path', () => {
+        let configuration;
+
+        afterEach(async () => {
+            await del([configuration.filePath]);
+        });
+
+        it('Custom config path is used', () => {
+            const customConfigFile = 'custom11.testcaferc.json';
+
+            const options = {
+                'hostname': '123.456.789',
+                'port1':    1234,
+                'port2':    5678,
+                'src':      'path1/folder',
+                'browser':  'ie'
+            };
+
+            createConfigFile(customConfigFile, options);
+
+            configuration = new TestCafeConfiguration(customConfigFile);
+
+            return configuration.init()
                 .then(() => {
-                    typeScriptConfiguration._filePath = customTSConfigFilePath;
+                    expect(pathUtil.basename(configuration.filePath)).eql(customConfigFile);
+                    expect(configuration.getOption('hostname')).eql(options.hostname);
+                    expect(configuration.getOption('port1')).eql(options.port1);
+                    expect(configuration.getOption('port2')).eql(options.port2);
+                    expect(configuration.getOption('src')).eql([ options.src ]);
+                    expect(configuration.getOption('browser')).eql(options.browser);
+                });
+        });
 
-                    expect(runner.bootstrapper.tsConfigPath).eql(customTSConfigFilePath);
-                    expect(consoleWrapper.messages.log).contains('You cannot override the "target" compiler option in the TypeScript configuration file.');
+        it('Constructor should revert back to default when no custom config', () => {
+            const defaultFileLocation = '.testcaferc.json';
+
+            const options = {
+                'hostname': '123.456.789',
+                'port1':    1234,
+                'port2':    5678,
+                'src':      'path1/folder',
+                'browser':  'ie'
+            };
+
+            createConfigFile(defaultFileLocation, options);
+
+            configuration = new TestCafeConfiguration();
+
+            return configuration.init()
+                .then(() => {
+                    expect(pathUtil.basename(configuration.filePath)).eql(defaultFileLocation);
+                    expect(configuration.getOption('hostname')).eql(options.hostname);
+                    expect(configuration.getOption('port1')).eql(options.port1);
+                    expect(configuration.getOption('port2')).eql(options.port2);
+                    expect(configuration.getOption('src')).eql([ options.src ]);
+                    expect(configuration.getOption('browser')).eql(options.browser);
                 });
         });
     });

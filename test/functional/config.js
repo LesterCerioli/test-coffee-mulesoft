@@ -1,7 +1,4 @@
-const os = require('os');
-
-const isTravisEnvironment = !!process.env.TRAVIS;
-const hostname            = isTravisEnvironment ? os.hostname() : '127.0.0.1';
+const hostname = process.env.USE_PUBLIC_HOSTNAME ? process.env.HOSTNAME : '127.0.0.1';
 
 const browserProviderNames = {
     sauceLabs:    'sauceLabs',
@@ -33,8 +30,6 @@ testingEnvironments[testingEnvironmentNames.osXDesktopAndMSEdgeBrowsers] = {
         accessKey: process.env.BROWSER_STACK_ACCESS_KEY
     },
 
-    retryTestPages: true,
-
     browsers: [
         {
             browserName: 'browserstack:safari@11.1:OS X High Sierra',
@@ -63,8 +58,6 @@ testingEnvironments[testingEnvironmentNames.mobileBrowsers] = {
         username:  process.env.BROWSER_STACK_USERNAME,
         accessKey: process.env.BROWSER_STACK_ACCESS_KEY
     },
-
-    retryTestPages: true,
 
     browsers: [
         {
@@ -115,8 +108,6 @@ testingEnvironments[testingEnvironmentNames.localChrome] = {
 
 testingEnvironments[testingEnvironmentNames.localBrowsersIE] = {
     isLocalBrowsers: true,
-
-    retryTestPages: true,
 
     browsers: [
         {
@@ -227,14 +218,16 @@ module.exports = {
     },
 
     get devMode () {
-        return !!process.env.DEV_MODE;
+        return process.env.DEV_MODE === 'true';
+    },
+
+    get isProxyless () {
+        return process.env.PROXYLESS === 'true';
     },
 
     get retryTestPages () {
         return this.currentEnvironment.retryTestPages;
     },
-
-    isTravisEnvironment,
 
     testingEnvironmentNames,
     testingEnvironments,

@@ -7,11 +7,11 @@ const Task                            = require('../../lib/runner/task');
 const Videos                          = require('../../lib/video-recorder/videos');
 const delay                           = require('../../lib/utils/delay');
 const { ReporterPluginError }         = require('../../lib/errors/runtime');
+const WarningLog                      = require('../../lib/notifications/warning-log');
 
 chai.use(require('chai-string'));
 
 describe('Reporter', () => {
-    // Runnable configuration mocks
     const screenshotDir = '/screenshots/1445437598847';
 
     const browserConnectionMocks = [
@@ -21,7 +21,8 @@ describe('Reporter', () => {
                 alias:           'Chrome',
                 parsedUserAgent: { userAgent: 'Chrome' }
             },
-            isHeadlessBrowser: () => false },
+            isHeadlessBrowser: () => false
+        },
         {
             userAgent:   'Firefox',
             browserInfo: {
@@ -408,7 +409,13 @@ describe('Reporter', () => {
 
     class TaskMock extends Task {
         constructor () {
-            super(testMocks, chunk(browserConnectionMocks, 1), {}, taskOptions);
+            super({
+                tests:                   testMocks,
+                browserConnectionGroups: chunk(browserConnectionMocks, 1),
+                proxy:                   {},
+                opts:                    taskOptions,
+                runnerWarningLog:        new WarningLog()
+            });
 
             this.screenshots = new ScreenshotsMock();
 
@@ -1163,7 +1170,9 @@ describe('Reporter', () => {
         expect(reporter.plugin.chalk.enabled).to.be.false;
     });
 
-    it('Should provide videos info to the reporter', () => {
+    it('Should provide videos info to the reporter', function () {
+        this.timeout(3000);
+
         const videoLog = [];
         const taskMock = new TaskMock();
 
@@ -1245,7 +1254,7 @@ describe('Reporter', () => {
             const lastErr = log.pop();
 
             expect(lastErr).instanceOf(ReporterPluginError);
-            expect(lastErr.message).startsWith(`An uncaught error occurred in the "customReporter" reporter's "${method}" method. Error details:\nError: oops`);
+            expect(lastErr.message).startsWith(`The "${method}" method of the "customReporter" reporter produced an uncaught error. Error details:\nError: oops`);
         }
     });
 });

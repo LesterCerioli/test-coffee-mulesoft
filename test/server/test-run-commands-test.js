@@ -4,11 +4,12 @@ const createCommandFromObject = require('../../lib/test-run/commands/from-object
 const SelectorBuilder         = require('../../lib/client-functions/selectors/selector-builder');
 const assertThrow             = require('./helpers/assert-runtime-error').assertThrow;
 const TestController          = require('../../lib/api/test-controller');
+const path                    = require('path');
 
 const testRunMock = {
     test: {
         testFile: {
-            filename: ''
+            filename: path.join(__dirname, 'test.js')
         }
     }
 };
@@ -511,7 +512,9 @@ describe('Test run commands', () => {
                         dummy: 'yo',
                         alt:   false,
                         meta:  false
-                    }
+                    },
+
+                    confidential: true
                 }
             };
 
@@ -535,7 +538,9 @@ describe('Test run commands', () => {
                         alt:   false,
                         shift: false,
                         meta:  false
-                    }
+                    },
+
+                    confidential: true
                 }
             });
 
@@ -1235,8 +1240,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but undefined was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is undefined, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -1254,8 +1259,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but number was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is number, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -1328,8 +1333,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but undefined was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is undefined, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -1347,8 +1352,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector,' +
-                                     ' node snapshot or a Promise returned by a Selector, but boolean was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is boolean, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -1423,8 +1428,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but undefined was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is undefined, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -1442,8 +1447,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but boolean was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is boolean, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -1497,8 +1502,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but undefined was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is undefined, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -1516,8 +1521,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but number was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is number, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -1590,8 +1595,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but undefined was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is undefined, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -1609,8 +1614,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but number was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is number, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -1698,8 +1703,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but undefined was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is undefined, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -1717,8 +1722,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but number was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is number, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -1736,8 +1741,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'destinationSelector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but undefined was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is undefined, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -1756,8 +1761,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'destinationSelector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but number was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is number, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -1793,8 +1798,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but undefined was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is undefined, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -1812,8 +1817,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but number was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is number, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -1939,8 +1944,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but undefined was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is undefined, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -1958,8 +1963,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but object was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is object, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -2062,8 +2067,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but undefined was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is undefined, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -2081,8 +2086,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but object was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is object, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -2185,8 +2190,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'startSelector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but undefined was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is undefined, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -2204,8 +2209,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'startSelector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but number was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is number, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -2224,8 +2229,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'endSelector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but boolean was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is boolean, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -2403,7 +2408,7 @@ describe('Test run commands', () => {
                         url:  'mail://testcafe@devexpress.com'
                     });
                 },
-                'Cannot prepare tests due to an error.\n\nThe specified "mail://testcafe@devexpress.com" test page URL uses an unsupported mail:// protocol. Only relative URLs or absolute URLs with http://, https:// and file:// protocols are supported.'
+                'Cannot prepare tests due to the following error:\n\nThe "mail://testcafe@devexpress.com" test page URL includes an unsupported mail:// protocol. TestCafe only supports http://, https:// and file:// protocols.'
             );
         });
 
@@ -2418,8 +2423,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but undefined was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is undefined, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -2437,8 +2442,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but number was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is number, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -2577,8 +2582,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but undefined was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is undefined, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -2596,8 +2601,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but number was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is number, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null
@@ -3046,8 +3051,8 @@ describe('Test run commands', () => {
                     isTestCafeError: true,
                     code:            'E23',
                     selectorName:    'selector',
-                    errMsg:          'Selector is expected to be initialized with a function, CSS selector string, another Selector, ' +
-                                     'node snapshot or a Promise returned by a Selector, but undefined was passed.',
+                    errMsg:          'Cannot initialize a Selector because Selector is undefined, and not one of the following: ' +
+                                     'a CSS selector string, a Selector object, a node snapshot, a function, or a Promise returned by a Selector.',
 
                     callsite:    null,
                     originError: null

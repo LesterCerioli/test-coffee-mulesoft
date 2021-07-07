@@ -15,7 +15,7 @@ export class WaitCommand extends CommandBase {
     }
 }
 
-class ExecuteClientFunctionCommandBase extends CommandBase {
+export class ExecuteClientFunctionCommandBase extends CommandBase {
     constructor (obj, testRun, type) {
         super(obj, testRun, type, false);
     }
@@ -52,9 +52,15 @@ export class ExecuteSelectorCommand extends ExecuteClientFunctionCommandBase {
     }
 }
 
-export class DebugCommand {
+export class DebugCommand extends CommandBase {
     constructor () {
-        this.type = TYPE.debug;
+        super(null, null, TYPE.debug);
+    }
+}
+
+export class DisableDebugCommand extends CommandBase {
+    constructor () {
+        super(null, null, TYPE.disableDebug);
     }
 }
 

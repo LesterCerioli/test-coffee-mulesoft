@@ -2,6 +2,7 @@ import { escape as escapeHtml } from 'lodash';
 import { TEST_RUN_ERRORS } from '../types';
 import {
     renderForbiddenCharsList,
+    renderDiff,
     formatSelectorCallstack,
     formatUrl,
     replaceLeadingSpacesWithNbsp,
@@ -32,8 +33,8 @@ export default {
     `,
 
     [TEST_RUN_ERRORS.pageLoadError]: err => `
-        A request to ${formatUrl(err.url)} has failed.
-        Use quarantine mode to perform additional attempts to execute this test.
+        Failed to load the page at ${formatUrl(err.url)}.
+        Increase the value of the "pageRequestTimeout" variable, enable the "retryTestPages" option, or use quarantine mode to perform additional attempts to execute this test.
         You can find troubleshooting information for this issue at ${formatUrl(EXTERNAL_LINKS.troubleshootNetwork)}.
 
         Error details:
@@ -43,8 +44,8 @@ export default {
     [TEST_RUN_ERRORS.uncaughtErrorOnPage]: err => `
         A JavaScript error occurred on ${formatUrl(err.pageDestUrl)}.
         Repeat test actions in the browser and check the console for errors.
-        If you see this error, it means that the tested website caused it. You can fix it or disable tracking JavaScript errors in TestCafe. To do the latter, enable the "--skip-js-errors" option.
-        If this error does not occur, please write a new issue at:
+        To ignore client-side JavaScript errors, enable the "--skip-js-errors" CLI option, or set the "skipJsErrors" configuration file property to "true".
+        If the website only throws this error when you test it with TestCafe, please create a new issue at:
         ${formatUrl(EXTERNAL_LINKS.createNewIssue)}.
 
         JavaScript error details:
@@ -242,9 +243,7 @@ export default {
     [TEST_RUN_ERRORS.externalAssertionLibraryError]: err => `
         ${escapeHtml(err.errMsg)}
 
-        <span class="diff-added">+ expected</span> <span class="diff-removed">- actual</span>
-
-        ${err.diff}
+        ${renderDiff(err.diff)}
     `,
 
     [TEST_RUN_ERRORS.domNodeClientFunctionResultError]: err => `
@@ -373,14 +372,18 @@ export default {
     `,
 
     [TEST_RUN_ERRORS.multipleWindowsModeIsDisabledError]: err => `
-        Multi window mode is disabled. Remove the "--disable-multiple-windows" CLI flag or set the "disableMultipleWindows" option to "false" in the API to use the "${err.methodName}" method.
+        Multi-window mode is disabled. To use the "${err.methodName}" method, remove the "disableMultipleWindows" option.
     `,
 
     [TEST_RUN_ERRORS.multipleWindowsModeIsNotSupportedInRemoteBrowserError]: err => `
-        Multi window mode is supported in Chrome, Chromium, Edge 84+ and Firefox only. Run tests in these browsers to use the "${err.methodName}" method.
+        Multi-window mode is supported in Chrome, Chromium, Edge 84+ and Firefox only. Run tests in these browsers to use the "${err.methodName}" method.
     `,
 
     [TEST_RUN_ERRORS.cannotCloseWindowWithoutParent]: () => `
         Cannot close the window because it does not have a parent. The parent window was closed or you are attempting to close the root browser window where tests were launched.
+    `,
+
+    [TEST_RUN_ERRORS.cannotRestoreChildWindowError]: () => `
+        Failed to restore connection to window within the allocated timeout.
     `,
 };

@@ -105,6 +105,10 @@ interface VideoEncodingOptions extends Partial<DefaultEncodingOptions> {
     aspect?: string;
 }
 
+type CompilerOptions = {
+    [key in 'typescript']: object;
+};
+
 interface TestCafe {
     /**
      * Creates the test runner that is used to configure and launch test tasks.
@@ -263,6 +267,11 @@ interface Runner {
      * The absolute or relative path to the TypeScript configuration file. Relative paths resolve from the current directory (the directory from which you run TestCafe).
      */
     tsConfigPath(path: string): this;
+
+    /**
+     * Specifies custom compiler options for built-in test file compilers.
+     */
+    compilerOptions(compilerOptions: CompilerOptions): this;
 }
 
 interface BrowserConnection {
@@ -287,9 +296,9 @@ interface RunOptions {
      */
     skipUncaughtErrors: boolean;
     /**
-     * Defines whether to enable the quarantine mode.
+     * Defines whether to enable quarantine mode and (optionally) what settings to use.
      */
-    quarantineMode: boolean;
+    quarantineMode: boolean | Record<string, string>;
     /**
      * Specifies if tests run in the debug mode. If this option is enabled, test execution is paused before the first action or assertion allowing you to invoke the developer tools and debug. In the debug mode, you can execute the test step-by-step to reproduce its incorrect behavior. You can also use the Unlock Page switch in the footer to unlock the tested page and interact with its elements.
      */
@@ -311,6 +320,10 @@ interface RunOptions {
      */
     pageLoadTimeout: number;
     /**
+     * Specifies the time (in milliseconds) TestCafe waits for the browser to start
+     */
+    browserInitTimeout: number;
+    /**
      * Specifies the test execution speed. A number between 1 (fastest) and 0.01 (slowest). If an individual action's speed is also specified, the action speed setting overrides the test speed.
      */
     speed: number;
@@ -326,6 +339,18 @@ interface RunOptions {
      * Defines whether to disable page caching during test execution.
      */
     disablePageCaching: boolean;
+    /**
+     * Specifies the timeout in milliseconds to complete the request for the page's HTML
+     */
+    pageRequestTimeout: number;
+    /**
+     * Specifies the timeout in milliseconds to complete the AJAX requests (XHR or fetch)
+     */
+    ajaxRequestTimeout: number;
+    /**
+     * Prevents TestCafe from taking screenshots. When this option is specified, screenshots are not taken whenever a test fails or when t.takeScreenshot or t.takeElementScreenshot is executed.
+     */
+    disableScreenshots: boolean;
 }
 
 interface TestCafeFactory {
@@ -334,6 +359,9 @@ interface TestCafeFactory {
         port1?: number,
         port2?: number,
         sslOptions?: TlsOptions,
-        developmentMode?: boolean
+        developmentMode?: boolean,
+        retryTestPages?: boolean,
+        cache?: boolean,
+        configFile?: string
     ): Promise<TestCafe>;
 }

@@ -1,6 +1,7 @@
 const expect                = require('chai').expect;
 const url                   = require('url');
 const net                   = require('net');
+const path                  = require('path');
 const createTestCafe        = require('../../lib/');
 const exportableLib         = require('../../lib/api/exportable-lib');
 const selfSignedCertificate = require('openssl-self-signed-certificate');
@@ -9,8 +10,8 @@ describe('TestCafe factory function', function () {
     let testCafe = null;
     let server   = null;
 
-    function getTestCafe (hostname, port1, port2, sslOptions) {
-        return createTestCafe(hostname, port1, port2, sslOptions)
+    function getTestCafe (hostname, port1, port2, ssl, developmentMode, retryTestPages, cache, configPath) {
+        return createTestCafe(hostname, port1, port2, ssl, developmentMode, retryTestPages, cache, configPath)
             .then(tc => {
                 testCafe = tc;
             });
@@ -72,7 +73,7 @@ describe('TestCafe factory function', function () {
                 throw new Error('Promise rejection expected');
             })
             .catch(function (err) {
-                expect(err.message).eql('The specified 1337 port is already in use by another program.');
+                expect(err.message).eql('Port 1337 is occupied by another process.');
             });
     });
 
@@ -82,7 +83,7 @@ describe('TestCafe factory function', function () {
                 throw new Error('Promise rejection expected');
             })
             .catch(function (err) {
-                expect(err.message).eql('The specified "example.org" hostname cannot be resolved to the current machine.');
+                expect(err.message).eql('Cannot resolve hostname "example.org".');
             });
     });
 
@@ -105,5 +106,37 @@ describe('TestCafe factory function', function () {
                 expect(testCafe.proxy.server2.key).eql(sslOptions.key);
                 expect(testCafe.proxy.server2.cert).eql(sslOptions.cert);
             });
+    });
+
+    describe('Custom Testcafe Config Path', () => {
+        it('Custom config path is used', () => {
+            const configFile = 'custom.testcaferc.json';
+
+            return getTestCafe('localhost', 1338, 1339, null, null, null, null, configFile)
+                .then(() => {
+                    expect(path.basename(testCafe.configuration.filePath)).eql(configFile);
+                });
+        });
+
+        it('Reverts back to default when not specified', () => {
+            const defaultConfigFile = '.testcaferc.json';
+
+            return getTestCafe('localhost', 1338, 1339)
+                .then(() => {
+                    expect(path.basename(testCafe.configuration.filePath)).eql(defaultConfigFile);
+                });
+        });
+
+        it('Works when created using null', () => {
+            const defaultConfigFile = '.testcaferc.json';
+
+            return createTestCafe(null)
+                .then(tc => {
+                    testCafe = tc;
+                })
+                .then(() => {
+                    expect(path.basename(testCafe.configuration.filePath)).eql(defaultConfigFile);
+                });
+        });
     });
 });

@@ -1,9 +1,13 @@
 import { resolve as resolvePath, dirname } from 'path';
 import debug from 'debug';
 import promisifyEvent from 'promisify-event';
-import mapReverse from 'map-reverse';
 import { EventEmitter } from 'events';
-import { flattenDeep as flatten, pull as remove, isFunction } from 'lodash';
+import {
+    flattenDeep as flatten,
+    pull as remove,
+    isFunction
+} from 'lodash';
+
 import Bootstrapper from './bootstrapper';
 import Reporter from '../reporter';
 import Task from './task';
@@ -14,18 +18,36 @@ import { assertType, is } from '../errors/runtime/type-assertions';
 import { renderForbiddenCharsList } from '../errors/test-run/utils';
 import detectFFMPEG from '../utils/detect-ffmpeg';
 import checkFilePath from '../utils/check-file-path';
-import { addRunningTest, removeRunningTest, startHandlingTestErrors, stopHandlingTestErrors } from '../utils/handle-errors';
+import {
+    addRunningTest,
+    removeRunningTest,
+    startHandlingTestErrors,
+    stopHandlingTestErrors
+} from '../utils/handle-errors';
+
 import OPTION_NAMES from '../configuration/option-names';
 import FlagList from '../utils/flag-list';
 import prepareReporters from '../utils/prepare-reporters';
 import loadClientScripts from '../custom-client-scripts/load';
 import { setUniqueUrls } from '../custom-client-scripts/utils';
 import ReporterStreamController from './reporter-stream-controller';
+import CustomizableCompilers from '../configuration/customizable-compilers';
+import { getConcatenatedValuesString, getPluralSuffix } from '../utils/string';
+import isLocalhost from '../utils/is-localhost';
+import WarningLog from '../notifications/warning-log';
+import authenticationHelper from '../cli/authentication-helper';
+import { errors, findWindow } from 'testcafe-browser-tools';
+import isCI from 'is-ci';
+import RemoteBrowserProvider from '../browser/provider/built-in/remote';
+import BrowserConnection from '../browser/connection';
+import OS from 'os-family';
+import detectDisplay from '../utils/detect-display';
+import { validateQuarantineOptions } from '../utils/get-options/quarantine';
 
 const DEBUG_LOGGER = debug('testcafe:runner');
 
 export default class Runner extends EventEmitter {
-    constructor (proxy, browserConnectionGateway, configuration, compilerService) {
+    constructor ({ proxy, browserConnectionGateway, configuration, compilerService }) {
         super();
 
         this.proxy               = proxy;
@@ -33,6 +55,9 @@ export default class Runner extends EventEmitter {
         this.pendingTaskPromises = [];
         this.configuration       = configuration;
         this.isCli               = false;
+        this.warningLog          = new WarningLog();
+        this.compilerService     = compilerService;
+        this._options            = {};
 
         this.apiMethodWasCalled = new FlagList([
             OPTION_NAMES.src,
@@ -43,7 +68,7 @@ export default class Runner extends EventEmitter {
     }
 
     _createBootstrapper (browserConnectionGateway, compilerService) {
-        return new Bootstrapper(browserConnectionGateway, compilerService);
+        return new Bootstrapper({ browserConnectionGateway, compilerService });
     }
 
     _disposeBrowserSet (browserSet) {
@@ -153,12 +178,19 @@ export default class Runner extends EventEmitter {
         return this._getFailedTestCount(task, reporters[0]);
     }
 
-    _createTask (tests, browserConnectionGroups, proxy, opts) {
-        return new Task(tests, browserConnectionGroups, proxy, opts);
+    _createTask (tests, browserConnectionGroups, proxy, opts, warningLog) {
+        return new Task({
+            tests,
+            browserConnectionGroups,
+            proxy,
+            opts,
+            runnerWarningLog: warningLog,
+            compilerService:  this.compilerService
+        });
     }
 
-    _runTask (reporterPlugins, browserSet, tests, testedApp) {
-        const task              = this._createTask(tests, browserSet.browserConnectionGroups, this.proxy, this.configuration.getOptions());
+    _runTask ({ reporterPlugins, browserSet, tests, testedApp, options }) {
+        const task              = this._createTask(tests, browserSet.browserConnectionGroups, this.proxy, options, this.warningLog);
         const reporters         = reporterPlugins.map(reporter => new Reporter(reporter.plugin, task, reporter.outStream, reporter.name));
         const completionPromise = this._getTaskResult(task, browserSet, reporters, testedApp);
         let completed           = false;
@@ -227,6 +259,35 @@ export default class Runner extends EventEmitter {
 
         if (typeof concurrency !== 'number' || isNaN(concurrency) || concurrency < 1)
             throw new GeneralError(RUNTIME_ERRORS.invalidConcurrencyFactor);
+
+        if (concurrency > 1 && this.bootstrapper.browsers.some(browser => {
+            return browser instanceof BrowserConnection
+                ? browser.browserInfo.browserOption.cdpPort
+                : browser.browserOption.cdpPort;
+        }))
+            throw new GeneralError(RUNTIME_ERRORS.cannotSetConcurrencyWithCDPPort);
+    }
+
+    async _validateBrowsers () {
+        const browsers = this.configuration.getOption(OPTION_NAMES.browsers);
+
+        if (!browsers || Array.isArray(browsers) && !browsers.length)
+            throw new GeneralError(RUNTIME_ERRORS.browserNotSet);
+
+        if (OS.mac)
+            await this._checkRequiredPermissions(browsers);
+
+        if (OS.linux && !detectDisplay())
+            await this._checkThatTestsCanRunWithoutDisplay(browsers);
+    }
+
+    _validateRequestTimeoutOption (optionName) {
+        const requestTimeout = this.configuration.getOption(optionName);
+
+        if (requestTimeout === void 0)
+            return;
+
+        assertType(is.nonNegativeNumber, null, `"${optionName}" option`, requestTimeout);
     }
 
     _validateProxyBypassOption () {
@@ -235,13 +296,13 @@ export default class Runner extends EventEmitter {
         if (proxyBypass === void 0)
             return;
 
-        assertType([ is.string, is.array ], null, '"proxyBypass" argument', proxyBypass);
+        assertType([ is.string, is.array ], null, 'The "proxyBypass" argument', proxyBypass);
 
         if (typeof proxyBypass === 'string')
             proxyBypass = [proxyBypass];
 
         proxyBypass = proxyBypass.reduce((arr, rules) => {
-            assertType(is.string, null, '"proxyBypass" argument', rules);
+            assertType(is.string, null, 'The "proxyBypass" argument', rules);
 
             return arr.concat(rules.split(','));
         }, []);
@@ -314,13 +375,64 @@ export default class Runner extends EventEmitter {
             throw new GeneralError(RUNTIME_ERRORS.cannotFindFFMPEG);
     }
 
+    _validateCompilerOptions () {
+        const compilerOptions = this.configuration.getOption(OPTION_NAMES.compilerOptions);
+
+        if (!compilerOptions)
+            return;
+
+        const specifiedCompilers  = Object.keys(compilerOptions);
+        const customizedCompilers = Object.keys(CustomizableCompilers);
+        const wrongCompilers      = specifiedCompilers.filter(compiler => !customizedCompilers.includes(compiler));
+
+        if (!wrongCompilers.length)
+            return;
+
+        const compilerListStr = getConcatenatedValuesString(wrongCompilers, void 0, "'");
+        const pluralSuffix    = getPluralSuffix(wrongCompilers);
+
+        throw new GeneralError(RUNTIME_ERRORS.cannotCustomizeSpecifiedCompilers, compilerListStr, pluralSuffix);
+    }
+
+    _validateRetryTestPagesOption () {
+        const retryTestPagesOption = this.configuration.getOption(OPTION_NAMES.retryTestPages);
+
+        if (!retryTestPagesOption)
+            return;
+
+        const ssl = this.configuration.getOption(OPTION_NAMES.ssl);
+
+        if (ssl)
+            return;
+
+        const hostname = this.configuration.getOption(OPTION_NAMES.hostname);
+
+        if (isLocalhost(hostname))
+            return;
+
+        throw new GeneralError(RUNTIME_ERRORS.cannotEnableRetryTestPagesOption);
+    }
+
+    _validateQuarantineOptions () {
+        const quarantineMode = this.configuration.getOption(OPTION_NAMES.quarantineMode);
+
+        if (typeof quarantineMode === 'object')
+            validateQuarantineOptions(quarantineMode, OPTION_NAMES.quarantineMode);
+    }
+
     async _validateRunOptions () {
         this._validateDebugLogger();
         this._validateScreenshotOptions();
         await this._validateVideoOptions();
         this._validateSpeedOption();
-        this._validateConcurrencyOption();
         this._validateProxyBypassOption();
+        this._validateCompilerOptions();
+        this._validateRetryTestPagesOption();
+        this._validateRequestTimeoutOption(OPTION_NAMES.pageRequestTimeout);
+        this._validateRequestTimeoutOption(OPTION_NAMES.ajaxRequestTimeout);
+        this._validateQuarantineOptions();
+        this._validateConcurrencyOption();
+        await this._validateBrowsers();
     }
 
     _createRunnableConfiguration () {
@@ -343,6 +455,7 @@ export default class Runner extends EventEmitter {
     _setBootstrapperOptions () {
         this.configuration.prepare();
         this.configuration.notifyAboutOverriddenOptions();
+        this.configuration.notifyAboutDeprecatedOptions(this.warningLog);
 
         this.bootstrapper.sources                = this.configuration.getOption(OPTION_NAMES.src) || this.bootstrapper.sources;
         this.bootstrapper.browsers               = this.configuration.getOption(OPTION_NAMES.browsers) || this.bootstrapper.browsers;
@@ -354,125 +467,8 @@ export default class Runner extends EventEmitter {
         this.bootstrapper.tsConfigPath           = this.configuration.getOption(OPTION_NAMES.tsConfigPath);
         this.bootstrapper.clientScripts          = this.configuration.getOption(OPTION_NAMES.clientScripts) || this.bootstrapper.clientScripts;
         this.bootstrapper.disableMultipleWindows = this.configuration.getOption(OPTION_NAMES.disableMultipleWindows);
-    }
-
-    // API
-    embeddingOptions (opts) {
-        const { assets, TestRunCtor } = opts;
-
-        this._registerAssets(assets);
-        this.configuration.mergeOptions({ TestRunCtor });
-
-        return this;
-    }
-
-    src (...sources) {
-        if (this.apiMethodWasCalled.src)
-            throw new GeneralError(RUNTIME_ERRORS.multipleAPIMethodCallForbidden, OPTION_NAMES.src);
-
-        sources = this._prepareArrayParameter(sources);
-        this.configuration.mergeOptions({ [OPTION_NAMES.src]: sources });
-
-        this.apiMethodWasCalled.src = true;
-
-        return this;
-    }
-
-    browsers (...browsers) {
-        if (this.apiMethodWasCalled.browsers)
-            throw new GeneralError(RUNTIME_ERRORS.multipleAPIMethodCallForbidden, OPTION_NAMES.browsers);
-
-        browsers = this._prepareArrayParameter(browsers);
-        this.configuration.mergeOptions({ browsers });
-
-        this.apiMethodWasCalled.browsers = true;
-
-        return this;
-    }
-
-    concurrency (concurrency) {
-        this.configuration.mergeOptions({ concurrency });
-
-        return this;
-    }
-
-    reporter (name, output) {
-        if (this.apiMethodWasCalled.reporter)
-            throw new GeneralError(RUNTIME_ERRORS.multipleAPIMethodCallForbidden, OPTION_NAMES.reporter);
-
-        let reporters = prepareReporters(name, output);
-
-        reporters = this._prepareArrayParameter(reporters);
-
-        this.configuration.mergeOptions({ [OPTION_NAMES.reporter]: reporters });
-
-        this.apiMethodWasCalled.reporter = true;
-
-        return this;
-    }
-
-    filter (filter) {
-        this.configuration.mergeOptions({ filter });
-
-        return this;
-    }
-
-    useProxy (proxy, proxyBypass) {
-        this.configuration.mergeOptions({ proxy, proxyBypass });
-
-        return this;
-    }
-
-    screenshots (...options) {
-        let fullPage;
-        let [path, takeOnFails, pathPattern] = options;
-
-        if (options.length === 1 && options[0] && typeof options[0] === 'object')
-            ({ path, takeOnFails, pathPattern, fullPage } = options[0]);
-
-        this.configuration.mergeOptions({ screenshots: { path, takeOnFails, pathPattern, fullPage } });
-
-        return this;
-    }
-
-    video (path, options, encodingOptions) {
-        this.configuration.mergeOptions({
-            [OPTION_NAMES.videoPath]:            path,
-            [OPTION_NAMES.videoOptions]:         options,
-            [OPTION_NAMES.videoEncodingOptions]: encodingOptions
-        });
-
-        return this;
-    }
-
-    startApp (command, initDelay) {
-        this.configuration.mergeOptions({
-            [OPTION_NAMES.appCommand]:   command,
-            [OPTION_NAMES.appInitDelay]: initDelay
-        });
-
-        return this;
-    }
-
-    tsConfigPath (path) {
-        this.configuration.mergeOptions({
-            [OPTION_NAMES.tsConfigPath]: path
-        });
-
-        return this;
-    }
-
-    clientScripts (...scripts) {
-        if (this.apiMethodWasCalled.clientScripts)
-            throw new GeneralError(RUNTIME_ERRORS.multipleAPIMethodCallForbidden, OPTION_NAMES.clientScripts);
-
-        scripts = this._prepareArrayParameter(scripts);
-
-        this.configuration.mergeOptions({ [OPTION_NAMES.clientScripts]: scripts });
-
-        this.apiMethodWasCalled.clientScripts = true;
-
-        return this;
+        this.bootstrapper.compilerOptions        = this.configuration.getOption(OPTION_NAMES.compilerOptions);
+        this.bootstrapper.browserInitTimeout     = this.configuration.getOption(OPTION_NAMES.browserInitTimeout);
     }
 
     async _prepareClientScripts (tests, clientScripts) {
@@ -488,18 +484,185 @@ export default class Runner extends EventEmitter {
         }));
     }
 
+    async _hasLocalBrowsers (browserInfo) {
+        for (const browser of browserInfo) {
+            if (browser instanceof BrowserConnection)
+                continue;
+
+            if (await browser.provider.isLocalBrowser(void 0, browser.browserName))
+                return true;
+        }
+
+        return false;
+    }
+
+    async _checkRequiredPermissions (browserInfo) {
+        const hasLocalBrowsers = await this._hasLocalBrowsers(browserInfo);
+
+        const { error } = await authenticationHelper(
+            () => findWindow(''),
+            errors.UnableToAccessScreenRecordingAPIError,
+            {
+                interactive: hasLocalBrowsers && !isCI
+            }
+        );
+
+        if (!error)
+            return;
+
+        if (hasLocalBrowsers)
+            throw error;
+
+        RemoteBrowserProvider.canDetectLocalBrowsers = false;
+    }
+
+    async _checkThatTestsCanRunWithoutDisplay (browserInfoSource) {
+        for (let browserInfo of browserInfoSource) {
+            if (browserInfo instanceof BrowserConnection)
+                browserInfo = browserInfo.browserInfo;
+
+            const isLocalBrowser    = await browserInfo.provider.isLocalBrowser(void 0, browserInfo.browserName);
+            const isHeadlessBrowser = await browserInfo.provider.isHeadlessBrowser(void 0, browserInfo.browserName);
+
+            if (isLocalBrowser && !isHeadlessBrowser) {
+                throw new GeneralError(
+                    RUNTIME_ERRORS.cannotRunLocalNonHeadlessBrowserWithoutDisplay,
+                    browserInfo.alias
+                );
+            }
+        }
+    }
+
+    async _applyOptions () {
+        await this.configuration.init(this._options);
+
+        return this._setBootstrapperOptions();
+    }
+
+    // API
+    embeddingOptions (opts) {
+        const { assets, TestRunCtor } = opts;
+
+        this._registerAssets(assets);
+        this._options.TestRunCtor = TestRunCtor;
+
+        return this;
+    }
+
+    src (...sources) {
+        if (this.apiMethodWasCalled.src)
+            throw new GeneralError(RUNTIME_ERRORS.multipleAPIMethodCallForbidden, OPTION_NAMES.src);
+
+        this._options[OPTION_NAMES.src] = this._prepareArrayParameter(sources);
+        this.apiMethodWasCalled.src     = true;
+
+        return this;
+    }
+
+    browsers (...browsers) {
+        if (this.apiMethodWasCalled.browsers)
+            throw new GeneralError(RUNTIME_ERRORS.multipleAPIMethodCallForbidden, OPTION_NAMES.browsers);
+
+        this._options.browsers           = this._prepareArrayParameter(browsers);
+        this.apiMethodWasCalled.browsers = true;
+
+        return this;
+    }
+
+    concurrency (concurrency) {
+        this._options.concurrency = concurrency;
+
+        return this;
+    }
+
+    reporter (name, output) {
+        if (this.apiMethodWasCalled.reporter)
+            throw new GeneralError(RUNTIME_ERRORS.multipleAPIMethodCallForbidden, OPTION_NAMES.reporter);
+
+        this._options[OPTION_NAMES.reporter] = this._prepareArrayParameter(prepareReporters(name, output));
+        this.apiMethodWasCalled.reporter     = true;
+
+        return this;
+    }
+
+    filter (filter) {
+        this._options.filter = filter;
+
+        return this;
+    }
+
+    useProxy (proxy, proxyBypass) {
+        this._options.proxy       = proxy;
+        this._options.proxyBypass = proxyBypass;
+
+        return this;
+    }
+
+    screenshots (...options) {
+        let fullPage;
+        let [path, takeOnFails, pathPattern] = options;
+
+        if (options.length === 1 && options[0] && typeof options[0] === 'object')
+            ({ path, takeOnFails, pathPattern, fullPage } = options[0]);
+
+        this._options.screenshots = { path, takeOnFails, pathPattern, fullPage };
+
+        return this;
+    }
+
+    video (path, options, encodingOptions) {
+        this._options[OPTION_NAMES.videoPath]            = path;
+        this._options[OPTION_NAMES.videoOptions]         = options;
+        this._options[OPTION_NAMES.videoEncodingOptions] = encodingOptions;
+
+        return this;
+    }
+
+    startApp (command, initDelay) {
+        this._options[OPTION_NAMES.appCommand]   = command;
+        this._options[OPTION_NAMES.appInitDelay] = initDelay;
+
+        return this;
+    }
+
+    tsConfigPath (path) {
+        this._options[OPTION_NAMES.tsConfigPath] = path;
+
+        return this;
+    }
+
+    clientScripts (...scripts) {
+        if (this.apiMethodWasCalled.clientScripts)
+            throw new GeneralError(RUNTIME_ERRORS.multipleAPIMethodCallForbidden, OPTION_NAMES.clientScripts);
+
+        this._options[OPTION_NAMES.clientScripts] = this._prepareArrayParameter(scripts);
+        this.apiMethodWasCalled.clientScripts     = true;
+
+        return this;
+    }
+
+    compilerOptions (opts) {
+        this._options[OPTION_NAMES.compilerOptions] = opts;
+
+        return this;
+    }
+
     run (options = {}) {
         this.apiMethodWasCalled.reset();
         this.configuration.mergeOptions(options);
-        this._setBootstrapperOptions();
 
         const runTaskPromise = Promise.resolve()
+            .then(() => this._applyOptions())
             .then(() => this._validateRunOptions())
             .then(() => this._createRunnableConfiguration())
             .then(async ({ reporterPlugins, browserSet, tests, testedApp, commonClientScripts }) => {
                 await this._prepareClientScripts(tests, commonClientScripts);
 
-                return this._runTask(reporterPlugins, browserSet, tests, testedApp);
+                const resultOptions = this.configuration.getOptions();
+
+                await this.bootstrapper.compilerService?.setOptions({ value: resultOptions });
+
+                return this._runTask({ reporterPlugins, browserSet, tests, testedApp, options: resultOptions });
             });
 
         return this._createCancelablePromise(runTaskPromise);
@@ -510,7 +673,11 @@ export default class Runner extends EventEmitter {
         // the pendingTaskPromises array, which leads to shifting indexes
         // towards the beginning. So, we must copy the array in order to iterate it,
         // or we can perform iteration from the end to the beginning.
-        const cancellationPromises = mapReverse(this.pendingTaskPromises, taskPromise => taskPromise.cancel());
+        const cancellationPromises = this.pendingTaskPromises.reduceRight((result, taskPromise) => {
+            result.push(taskPromise.cancel());
+
+            return result;
+        }, []);
 
         await Promise.all(cancellationPromises);
     }

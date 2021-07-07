@@ -1,6 +1,6 @@
 import TestController from './test-controller';
 import testRunTracker from './test-run-tracker';
-import { TestRun } from './test-run-tracker.d';
+import TestRun from '../test-run';
 import TestCafeErrorList from '../errors/error-list';
 import { MissingAwaitError } from '../errors/test-run';
 import addRenderedWarning from '../notifications/add-rendered-warning';
@@ -40,6 +40,9 @@ export default function wrapTestFunction (fn: Function): Function {
         }
 
         if (!errList.hasUncaughtErrorsInTestCode) {
+            for (const callsite of testRun.observedCallsites.awaitedSnapshotWarnings.values())
+                addRenderedWarning(testRun.warningLog, WARNING_MESSAGES.excessiveAwaitInAssertion, callsite);
+
             addWarnings(testRun.observedCallsites.unawaitedSnapshotCallsites, WARNING_MESSAGES.missingAwaitOnSnapshotProperty);
             addErrors(testRun.observedCallsites.callsitesWithoutAwait, MissingAwaitError);
         }

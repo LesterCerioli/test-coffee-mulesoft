@@ -18,7 +18,17 @@ const WarningLog                      = require('../../lib/notifications/warning
 
 class BrowserConnectionMock extends BrowserConnection {
     constructor () {
-        super({ startServingConnection: () => {} }, { openBrowser: () => {} });
+        const browserConnectionGatewayMock = {
+            startServingConnection: noop,
+            stopServingConnection:  noop
+        };
+
+        const providerMock = {
+            openBrowser:    noop,
+            isLocalBrowser: noop
+        };
+
+        super(browserConnectionGatewayMock, { provider: providerMock });
 
         this.ready = true;
     }
@@ -326,7 +336,7 @@ describe('Browser provider', function () {
                 const testProvider = Object.assign({}, dedicatedBrowserProviderBase, {
                     providerName: 'browser',
 
-                    _getConfig () {
+                    getConfig () {
                         return {};
                     }
                 });
@@ -350,7 +360,7 @@ describe('Browser provider', function () {
                 const testProvider = Object.assign({}, dedicatedBrowserProviderBase, {
                     providerName: 'browser',
 
-                    _getConfig () {
+                    getConfig () {
                         return {};
                     }
                 });
@@ -446,7 +456,9 @@ describe('Browser provider', function () {
     });
 
     describe('Regression', () => {
-        it('Should raise a warning if a browser window was not found', async () => {
+        it('Should raise a warning if a browser window was not found', async function () {
+            this.timeout(3000);
+
             const bc         = new BrowserConnectionMock();
             const warningLog = new WarningLog();
 

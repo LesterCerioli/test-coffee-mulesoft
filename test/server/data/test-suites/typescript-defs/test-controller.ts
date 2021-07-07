@@ -794,3 +794,53 @@ test('messages formatting', async t => {
         .expect(messages.warn.length).eql(0)
         .expect(messages.error.length).eql(0);
 });
+
+test('action result coercion', async t => {
+    function test (): Promise<void> {
+        return t.expect(1).ok();
+    }
+
+    test();
+});
+
+test('scroll methods', async t => {
+    const target = Selector('#target');
+
+    await t.scroll(100, 500);
+    await t.scroll(target, 100, 500);
+    await t.scroll('top');
+    await t.scroll('left');
+    await t.scroll('right');
+    await t.scroll('bottom');
+    await t.scroll('topLeft');
+    await t.scroll('topRight');
+    await t.scroll('bottomLeft');
+    await t.scroll('bottomRight');
+    await t.scroll('center');
+    await t.scroll(target, 'top');
+    await t.scroll(target, 'left');
+    await t.scroll(target, 'right');
+    await t.scroll(target, 'bottom');
+    await t.scroll(target, 'topLeft');
+    await t.scroll(target, 'topRight');
+    await t.scroll(target, 'bottomLeft');
+    await t.scroll(target, 'bottomRight');
+    await t.scroll(target, 'center');
+    await t.scrollBy(1, 2);
+    await t.scrollBy(-1, -2);
+    await t.scrollBy(target, 1, 2);
+    await t.scrollBy(target, -1, -2);
+    await t.scrollIntoView(target);
+
+    await t.scroll(target, 100, 200, { offsetX: 1, offsetY: 1 });
+    await t.scroll(target, 'top', { offsetX: 1, offsetY: 1 });
+    await t.scrollBy(target, 100, 200, { offsetX: -1, offsetY: -1 });
+    await t.scrollIntoView(target, { offsetX: 1, offsetY: 1 });
+});
+
+test('dispatch', async t => {
+    const target = Selector('#target');
+
+    await t.dispatchEvent(target, 'mousedown');
+    await t.dispatchEvent(target, 'mousedown', { button: 1 });
+});

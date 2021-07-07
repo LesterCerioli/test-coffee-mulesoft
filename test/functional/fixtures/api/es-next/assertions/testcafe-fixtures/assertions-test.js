@@ -191,5 +191,70 @@ test('Await Selector property', async t => {
 test('Snapshot property without await', async t => {
     await t.expect(Selector('#el1').innerText).eql('');
 
-    Selector('#el1').innerText;
+    console.log(Selector('#el1').innerText); //eslint-disable-line
+
+    const tag = `element: ${Selector('#el1').tagName}`; //eslint-disable-line
+});
+
+test(`Console.log for promise which will be resolved`, async t => {
+    const a = Selector('#el1').innerText;
+
+    // eslint-disable-next-line no-console
+    console.log(a);
+
+    await t.expect(a).eql('');
+});
+
+test(`Convert for promise which will be resolved`, async t => {
+    const a = Selector('#el1').innerText;
+
+    const tag = `${a}`; //eslint-disable-line
+
+    await t.expect(a).eql('');
+});
+
+test('Snapshot property without await but valid', async t => {
+    const b = Selector('#el1').innerText; //eslint-disable-line
+
+    await t.expect(Selector('#el1').innerText).eql('');
+});
+
+test('Reused unawaited selector property assertion from a function', async t => {
+    async function assertionFunction () {
+        const selector = Selector('#el1');
+
+        await t.expect(selector.innerText).eql('');
+    }
+
+    await assertionFunction();
+    await assertionFunction();
+    await assertionFunction();
+});
+
+test('Reused awaited selector property assertion from a function', async t => {
+    async function assertionFunction () {
+        const selector = Selector('#el1');
+
+        await t.expect(await selector.innerText).eql('');
+    }
+
+    await assertionFunction();
+    await assertionFunction();
+    await assertionFunction();
+});
+
+test('Reused unawaited selector property assertion in a loop', async t => {
+    for (let i = 0; i < 3; i++)
+        await t.expect(Selector('#el1').innerText).eql('');
+});
+
+test('Reused awaited selector property assertion in a loop', async t => {
+    for (let i = 0; i < 3; i++)
+        await t.expect(await Selector('#el1').innerText).eql('');
+});
+
+test('Multiple awaited selector properties in one assertion', async t => {
+    const selector = Selector('#el1');
+
+    await t.expect(await selector.innerText + await selector.innerText).eql('');
 });

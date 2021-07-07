@@ -18,7 +18,26 @@ export default {
         this.openedBrowsers[browserId].activeWindowId = val;
     },
 
-    _getConfig () {
+    getPageTitle (browserId) {
+        const runtimeInfo     = this.openedBrowsers[browserId];
+        const isIdlePageShown = !Object.keys(runtimeInfo.windowDescriptors).length;
+
+        return isIdlePageShown ? browserId : runtimeInfo.activeWindowId;
+    },
+
+    getWindowDescriptor (browserId) {
+        const runtimeInfo = this.openedBrowsers[browserId];
+
+        return runtimeInfo.windowDescriptors[runtimeInfo.activeWindowId];
+    },
+
+    setWindowDescriptor (browserId, windowDescriptor) {
+        const runtimeInfo = this.openedBrowsers[browserId];
+
+        runtimeInfo.windowDescriptors[runtimeInfo.activeWindowId] = windowDescriptor;
+    },
+
+    getConfig () {
         throw new Error('Not implemented');
     },
 
@@ -31,7 +50,7 @@ export default {
     },
 
     async isValidBrowserName (browserName) {
-        const config      = await this._getConfig(browserName);
+        const config      = await this.getConfig(browserName);
         const browserInfo = await getBrowserInfo(config.path || this._getBrowserName());
 
         return !!browserInfo;
@@ -45,7 +64,7 @@ export default {
         if (browserId)
             return this.openedBrowsers[browserId].config.headless;
 
-        const config = this._getConfig(browserName);
+        const config = this.getConfig(browserName);
 
         return !!config.headless;
     },
@@ -65,7 +84,7 @@ export default {
     async takeScreenshot (browserId, path, viewportWidth, viewportHeight, fullPage) {
         const runtimeInfo    = this.openedBrowsers[browserId];
         const browserClient  = this._getBrowserProtocolClient(runtimeInfo);
-        const binaryImage    = await browserClient.getScreenshotData(runtimeInfo, fullPage);
+        const binaryImage    = await browserClient.getScreenshotData(fullPage);
         const cropDimensions = this._getCropDimensions(viewportWidth, viewportHeight);
 
         let pngImage = await readPng(binaryImage);
@@ -80,5 +99,26 @@ export default {
         const maximumSize = getMaximizedHeadlessWindowSize();
 
         await this.resizeWindow(browserId, maximumSize.width, maximumSize.height, maximumSize.width, maximumSize.height);
+    },
+
+    async executeClientFunction (browserId, command, callsite) {
+        const runtimeInfo   = this.openedBrowsers[browserId];
+        const browserClient = this._getBrowserProtocolClient(runtimeInfo);
+
+        return browserClient.executeClientFunction(command, callsite);
+    },
+
+    async switchToIframe (browserId) {
+        const runtimeInfo   = this.openedBrowsers[browserId];
+        const browserClient = this._getBrowserProtocolClient(runtimeInfo);
+
+        return browserClient.switchToIframe();
+    },
+
+    async switchToMainWindow (browserId) {
+        const runtimeInfo   = this.openedBrowsers[browserId];
+        const browserClient = this._getBrowserProtocolClient(runtimeInfo);
+
+        return browserClient.switchToMainWindow();
     }
 };

@@ -8,8 +8,8 @@ import { GeneralError } from '../errors/runtime';
 import { RUNTIME_ERRORS } from '../errors/types';
 
 class LiveModeRunner extends Runner {
-    constructor (proxy, browserConnectionGateway, options) {
-        super(proxy, browserConnectionGateway, options);
+    constructor ({ proxy, browserConnectionGateway, configuration }) {
+        super({ proxy, browserConnectionGateway, configuration });
 
         this.stopping              = false;
         this.runnerTaskPromise     = null;
@@ -38,7 +38,9 @@ class LiveModeRunner extends Runner {
                 return this._validateRunnableConfiguration(isFirstRun);
             })
             .then(() => {
-                this.testRunController.setExpectedTestCount(this.configurationCache.tests.filter(t => !t.skip).length);
+                const expectedTestCount = this.configurationCache.tests.length;
+
+                this.testRunController.setExpectedTestCount(expectedTestCount);
             })
             .then(() => {
                 this.runnerTaskPromise = super.run(this.opts);
@@ -99,14 +101,13 @@ class LiveModeRunner extends Runner {
 
         this.opts = Object.assign({}, this.opts, options);
 
-        this._setBootstrapperOptions();
-
         const fileListPromise = parseFileList(this.bootstrapper.sources, process.cwd());
 
         fileListPromise
             .then(files => {
                 return this.controller.init(files);
             })
+            .then(() => this._applyOptions())
             .then(() => this._createRunnableConfiguration())
             .then(() => this.runTests(true));
 
@@ -170,7 +171,7 @@ class LiveModeRunner extends Runner {
     _createTask (tests, browserConnectionGroups, proxy, opts) {
         opts.live = true;
 
-        return super._createTask(tests, browserConnectionGroups, proxy, opts);
+        return super._createTask(tests, browserConnectionGroups, proxy, opts, this.warningLog);
     }
 
     _createBootstrapper (browserConnectionGateway) {
