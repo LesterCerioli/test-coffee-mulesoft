@@ -7,7 +7,7 @@ import TestRunErrorFormattableAdapter from '../../errors/test-run/formattable-ad
 
 const DEFAULT_ATTEMPT_LIMIT = 5;
 const DEFAULT_THRESHOLD     = 3;
-const MIN_ATTEMPT_LIMIT     = 2;
+const MIN_ATTEMPT_LIMIT     = 1;
 const MIN_SUCCESS_THRESHOLD = 1;
 
 function _isQuarantineOption (option: string): option is QUARANTINE_OPTION_NAMES {
@@ -66,8 +66,13 @@ export class Quarantine {
     public constructor () {
         this.attempts = [];
         this.attemptLimit = DEFAULT_ATTEMPT_LIMIT;
-        this.successThreshold = DEFAULT_THRESHOLD;
+        this.successThreshold = 1;
         this.failureThreshold = DEFAULT_THRESHOLD;
+
+        if (process.env.MAX_QUARANTINE_RETRIES)
+            this.attemptLimit = parseInt(process.env.MAX_QUARANTINE_RETRIES.toString(), 10);
+
+
     }
 
     public getFailedAttempts (): TestRunErrorFormattableAdapter[][] {

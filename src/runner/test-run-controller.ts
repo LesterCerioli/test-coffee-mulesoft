@@ -14,7 +14,6 @@ import { ActionEventArg, TestRunControllerInit } from './interfaces';
 import CompilerService from '../services/compiler/host';
 import { Quarantine } from '../utils/get-options/quarantine';
 
-let QUARANTINE_THRESHOLD = 1;
 let DISCONNECT_THRESHOLD = 1;
 
 
@@ -45,10 +44,9 @@ export default class TestRunController extends AsyncEventEmitter {
     }: TestRunControllerInit) {
         super();
 
-        if (process.env.MAX_QUARANTINE_RETRIES) {
+        if (process.env.MAX_QUARANTINE_RETRIES)
             DISCONNECT_THRESHOLD = parseInt(process.env.MAX_QUARANTINE_RETRIES.toString(), 10);
-            QUARANTINE_THRESHOLD = parseInt(process.env.MAX_QUARANTINE_RETRIES.toString(), 10);
-        }
+
 
         this.test  = test;
         this.index = index;
